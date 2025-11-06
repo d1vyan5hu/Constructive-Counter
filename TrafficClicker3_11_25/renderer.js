@@ -687,6 +687,10 @@ function initializeSetup() {
     state.recapEndTime = null;
     state.recapCompleted = false;
     state.rewindStartTime = null;
+    // Reset spacePressed - will be set to true when space is pressed or when session is restored
+    if (!state.pendingSessionData || state.savedVideoPosition === 0) {
+      state.spacePressed = false;
+    }
 
     // Close any open modal
     if (elements.choiceModal) {
@@ -826,6 +830,10 @@ function initializeSetup() {
     state.recapEndTime = null;
     state.recapCompleted = false;
     state.rewindStartTime = null;
+    // Reset spacePressed - will be set to true when space is pressed or when session is restored
+    if (!state.pendingSessionData || state.savedVideoPosition === 0) {
+      state.spacePressed = false;
+    }
 
     // Close any open modal
     if (elements.choiceModal) {
