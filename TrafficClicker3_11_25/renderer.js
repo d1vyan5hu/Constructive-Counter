@@ -720,6 +720,9 @@ function initializeSetup() {
     }
 
     initializeVideo();
+    // CRITICAL: Initialize counting screen handlers (keyboard listeners, etc.)
+    // This ensures keyboard controls work when loading sessions
+    initializeCounting();
     
     // Restore video position and entries if session was loaded
     if (state.savedVideoPosition > 0 && state.videoElement) {
@@ -876,6 +879,10 @@ function initializeSetup() {
 
     elements.setupScreen.style.display = 'none';
     elements.countingScreen.classList.add('active');
+    
+    // CRITICAL: Initialize counting screen handlers (keyboard listeners, etc.)
+    // This ensures keyboard controls work when loading sessions
+    initializeCounting();
 
     // Update instruction message for audit mode
     if (elements.instructionMessage) {
