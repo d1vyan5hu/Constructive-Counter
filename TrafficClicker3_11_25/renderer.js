@@ -723,15 +723,23 @@ function initializeSetup() {
     
     // Restore video position and entries if session was loaded
     if (state.savedVideoPosition > 0 && state.videoElement) {
+      // Enable rewind mode to show dots for existing entries
+      state.isRewinding = true;
+      
       // Wait for video metadata to be loaded
       const restorePosition = () => {
         if (state.videoElement.readyState >= 2) {
           // Video metadata is loaded
           const seekTime = Math.max(0, Math.min(state.savedVideoPosition, state.videoElement.duration));
+          log(`Restoring video position to ${seekTime.toFixed(2)}s (saved: ${state.savedVideoPosition.toFixed(2)}s, duration: ${state.videoElement.duration.toFixed(2)}s)`);
           state.videoElement.currentTime = seekTime;
           
           state.videoElement.addEventListener('seeked', function onSeeked() {
             state.videoElement.removeEventListener('seeked', onSeeked);
+            
+            // Verify we're at the correct position
+            const actualTime = state.videoElement.currentTime;
+            log(`Video seeked to ${actualTime.toFixed(2)}s (target was ${seekTime.toFixed(2)}s)`);
             
             // Update UI
             updateVideoTimeDisplay();
@@ -739,6 +747,8 @@ function initializeSetup() {
             if (elements.entryCountBadge) {
               elements.entryCountBadge.textContent = `Entries: ${state.masterLog.length}`;
             }
+            
+            // Draw dots for all existing entries
             drawRedDots();
             
             // Hide instruction message
@@ -757,13 +767,16 @@ function initializeSetup() {
           }, { once: true });
         } else {
           // Wait for metadata to load
+          log('Waiting for video metadata to load before restoring position...');
           state.videoElement.addEventListener('loadedmetadata', function onLoadedMetadata() {
             state.videoElement.removeEventListener('loadedmetadata', onLoadedMetadata);
+            log('Video metadata loaded, restoring position...');
             restorePosition();
           }, { once: true });
         }
       };
       
+      // Start restore process
       restorePosition();
     } else if (state.masterLog.length > 0) {
       // Session loaded but no saved position - just restore entries
@@ -1120,7 +1133,16 @@ function initializeVideo() {
     // Wait for next frame to ensure layout is complete
     requestAnimationFrame(() => {
       if (!state.videoElement) return;
-      // Set video to pause at 1 second
+      
+      // Don't set currentTime to 1.0 if we're restoring a session with a saved position
+      // The session restore handler will set the correct position
+      if (state.savedVideoPosition > 0) {
+        // Session restore will handle positioning, just initialize overlays
+        initializeOverlays();
+        return;
+      }
+      
+      // Set video to pause at 1 second (only for new sessions)
       state.videoElement.currentTime = 1.0;
       state.videoElement.pause();
 
