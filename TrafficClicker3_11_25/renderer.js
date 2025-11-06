@@ -489,6 +489,60 @@ function loadVideoFromUrl(videoUrl) {
 // SETUP SCREEN
 // ============================================================================
 
+/**
+ * Update setup fields visibility and labels based on config
+ * @param {Object} config - Configuration object with optional setupFields array
+ */
+function updateSetupFieldsFromConfig(config) {
+  if (!config || !config.setupFields) {
+    // No setupFields in config - hide all fields
+    const fieldIds = ['street-name', 'guid', 'site-description'];
+    fieldIds.forEach(fieldId => {
+      const fieldGroup = document.getElementById(`setup-field-${fieldId}`);
+      if (fieldGroup) {
+        fieldGroup.style.display = 'none';
+      }
+    });
+    return;
+  }
+
+  // Map of field IDs to their default labels
+  const defaultLabels = {
+    'street-name': 'Street Name',
+    'guid': 'GUID',
+    'site-description': 'Site Description'
+  };
+
+  // Hide all fields first
+  const allFieldIds = ['street-name', 'guid', 'site-description'];
+  allFieldIds.forEach(fieldId => {
+    const fieldGroup = document.getElementById(`setup-field-${fieldId}`);
+    if (fieldGroup) {
+      fieldGroup.style.display = 'none';
+    }
+  });
+
+  // Show and configure fields specified in config
+  config.setupFields.forEach(field => {
+    const fieldId = field.id;
+    const fieldGroup = document.getElementById(`setup-field-${fieldId}`);
+    const labelElement = document.getElementById(`setup-label-${fieldId}`);
+    
+    if (fieldGroup) {
+      // Show the field
+      fieldGroup.style.display = 'block';
+      
+      // Update label if provided
+      if (labelElement && field.label) {
+        labelElement.textContent = field.label;
+      } else if (labelElement && defaultLabels[fieldId]) {
+        // Restore default label if no custom label provided
+        labelElement.textContent = defaultLabels[fieldId];
+      }
+    }
+  });
+}
+
 function initializeSetup() {
   // Mode toggle
   elements.modeEntry.addEventListener('change', () => {
