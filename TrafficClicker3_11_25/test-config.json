@@ -33,5 +33,19 @@
         {"value": "west", "label": "West"}
       ]
     }
+  ],
+  "setupFields": [
+    {
+      "id": "street-name",
+      "label": "Street Name"
+    },
+    {
+      "id": "guid",
+      "label": "GUID"
+    },
+    {
+      "id": "site-description",
+      "label": "Site Description"
+    }
   ]
 }
