@@ -4168,8 +4168,20 @@ function replaceStreamWithDownload(currentPlaybackTime) {
     return;
   }
   
-  // Save current playback time
+  // Save current playback time and play state
   const savedTime = currentPlaybackTime;
+  const wasPlaying = !state.videoElement.paused;
+  
+  // Pause video before replacing to prevent autoplay issues
+  state.videoElement.pause();
+  
+  // Temporarily disable the play event listener to prevent interference during replacement
+  let playListenerDisabled = false;
+  const originalPlayListener = state.eventListeners.pause;
+  if (state.videoElement && state.eventListeners.pause) {
+    // We'll re-enable it after replacement
+    playListenerDisabled = true;
+  }
   
   // Replace video source
   const oldSrc = state.videoElement.src;
@@ -4190,19 +4202,42 @@ function replaceStreamWithDownload(currentPlaybackTime) {
     elements.videoStatus.textContent = `Loaded: ${filename}`;
   }
   
+  // Prevent autoplay during replacement
+  state.videoElement.autoplay = false;
+  
   // Wait for video to load and seek to saved position
   state.videoElement.addEventListener('loadedmetadata', function onLoadedMetadata() {
     state.videoElement.removeEventListener('loadedmetadata', onLoadedMetadata);
     
+    // Ensure video is paused before seeking
+    if (!state.videoElement.paused) {
+      state.videoElement.pause();
+    }
+    
     // Seek to saved position
-    state.videoElement.currentTime = Math.max(0, Math.min(savedTime, state.videoElement.duration));
+    const targetTime = Math.max(0, Math.min(savedTime, state.videoElement.duration));
+    state.videoElement.currentTime = targetTime;
     
     state.videoElement.addEventListener('seeked', function onSeeked() {
       state.videoElement.removeEventListener('seeked', onSeeked);
-      state.videoElement.pause();
-      showToast('Video replaced with downloaded file', 'success', 3000);
-      log(`Video replaced: stream -> ${state.downloadPath} at ${savedTime.toFixed(2)}s`);
-    });
+      
+      // Update video time display
+      updateVideoTimeDisplay();
+      
+      // Restore play state if video was playing before replacement
+      if (wasPlaying) {
+        state.videoElement.play().catch(err => {
+          log(`Error resuming playback after replacement: ${err.message}`);
+          showToast('Video replaced, but playback could not resume', 'warning', 3000);
+        });
+      } else {
+        // Ensure video is paused
+        state.videoElement.pause();
+      }
+      
+      showToast(`Video replaced with downloaded file at ${formatTime(targetTime)}`, 'success', 3000);
+      log(`Video replaced: stream -> ${state.downloadPath} at ${targetTime.toFixed(2)}s (was ${wasPlaying ? 'playing' : 'paused'})`);
+    }, { once: true });
   }, { once: true });
   
   // Load the new source
