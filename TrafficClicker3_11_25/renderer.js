@@ -719,40 +719,56 @@ function initializeSetup() {
     
     // Restore video position and entries if session was loaded
     if (state.savedVideoPosition > 0 && state.videoElement) {
-      state.videoElement.addEventListener('loadedmetadata', function onLoadedMetadata() {
-        state.videoElement.removeEventListener('loadedmetadata', onLoadedMetadata);
-        
-        // Seek to exact saved position
-        const seekTime = Math.max(0, Math.min(state.savedVideoPosition, state.videoElement.duration));
-        state.videoElement.currentTime = seekTime;
-        
-        state.videoElement.addEventListener('seeked', function onSeeked() {
-          state.videoElement.removeEventListener('seeked', onSeeked);
+      // Wait for video metadata to be loaded
+      const restorePosition = () => {
+        if (state.videoElement.readyState >= 2) {
+          // Video metadata is loaded
+          const seekTime = Math.max(0, Math.min(state.savedVideoPosition, state.videoElement.duration));
+          state.videoElement.currentTime = seekTime;
           
-          // Update UI
-          updateVideoTimeDisplay();
-          updateLogsPanel();
-          if (elements.entryCountBadge) {
-            elements.entryCountBadge.textContent = `Entries: ${state.masterLog.length}`;
-          }
-          drawRedDots();
-          
-          // Hide instruction message
-          if (elements.instructionMessage) {
-            elements.instructionMessage.classList.add('hidden');
-          }
-          
-          // Automatically start playing from saved position
-          state.spacePressed = true; // Enable clicks
-          state.videoElement.play();
-          state.videoElement.playbackRate = state.playbackSpeed;
-          
-          showToast(`Session restored: Playing from ${formatTime(seekTime)}`, 'success', 3000);
-          log(`Session restored: Video position ${seekTime.toFixed(2)}s, ${state.masterLog.length} entries`);
-        }, { once: true });
-      }, { once: true });
+          state.videoElement.addEventListener('seeked', function onSeeked() {
+            state.videoElement.removeEventListener('seeked', onSeeked);
+            
+            // Update UI
+            updateVideoTimeDisplay();
+            updateLogsPanel();
+            if (elements.entryCountBadge) {
+              elements.entryCountBadge.textContent = `Entries: ${state.masterLog.length}`;
+            }
+            drawRedDots();
+            
+            // Hide instruction message
+            if (elements.instructionMessage) {
+              elements.instructionMessage.classList.add('hidden');
+            }
+            
+            // Automatically start playing from saved position
+            state.spacePressed = true; // Enable clicks
+            enableVideoClicks(); // CRITICAL: Enable click handler
+            state.videoElement.play();
+            state.videoElement.playbackRate = state.playbackSpeed;
+            
+            showToast(`Session restored: Playing from ${formatTime(seekTime)}`, 'success', 3000);
+            log(`Session restored: Video position ${seekTime.toFixed(2)}s, ${state.masterLog.length} entries`);
+          }, { once: true });
+        } else {
+          // Wait for metadata to load
+          state.videoElement.addEventListener('loadedmetadata', function onLoadedMetadata() {
+            state.videoElement.removeEventListener('loadedmetadata', onLoadedMetadata);
+            restorePosition();
+          }, { once: true });
+        }
+      };
+      
+      restorePosition();
     } else if (state.masterLog.length > 0) {
       // Session loaded but no saved position - just restore entries
+      // Still need to enable clicks if space was pressed in the saved session
+      if (state.savedVideoPosition > 0) {
+        // If there was a saved position, assume space was pressed
+        state.spacePressed = true;
+        enableVideoClicks();
+      }
       updateLogsPanel();
       if (elements.entryCountBadge) {
         elements.entryCountBadge.textContent = `Entries: ${state.masterLog.length}`;
@@ -875,6 +891,7 @@ function initializeSetup() {
           
           // Automatically start playing from saved position
           state.spacePressed = true; // Enable clicks
+          enableVideoClicks(); // CRITICAL: Enable click handler
           state.videoElement.play();
           state.videoElement.playbackRate = state.playbackSpeed;
           
