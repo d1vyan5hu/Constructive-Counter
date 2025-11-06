@@ -780,6 +780,9 @@ function initializeSetup() {
       restorePosition();
     } else if (state.masterLog.length > 0) {
       // Session loaded but no saved position - just restore entries
+      // Enable rewind mode to show dots for existing entries
+      state.isRewinding = true;
+      
       // Still need to enable clicks if space was pressed in the saved session
       if (state.savedVideoPosition > 0) {
         // If there was a saved position, assume space was pressed
@@ -790,7 +793,22 @@ function initializeSetup() {
       if (elements.entryCountBadge) {
         elements.entryCountBadge.textContent = `Entries: ${state.masterLog.length}`;
       }
-      drawRedDots();
+      
+      // Wait for video to be ready before drawing dots
+      if (state.videoElement) {
+        const drawDotsWhenReady = () => {
+          if (state.videoElement.readyState >= 2) {
+            drawRedDots();
+          } else {
+            state.videoElement.addEventListener('loadedmetadata', () => {
+              drawRedDots();
+            }, { once: true });
+          }
+        };
+        drawDotsWhenReady();
+      } else {
+        drawRedDots();
+      }
       showToast('Session restored', 'success', 2000);
     }
   });
