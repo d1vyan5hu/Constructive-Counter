@@ -173,6 +173,14 @@ function createWindow() {
   });
 
   mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    // Filter out harmless Electron/Chromium warnings
+    if (message.includes("Autofill.enable") || 
+        message.includes("Autofill.setAddresses") ||
+        message.includes("SharedImageManager") ||
+        message.includes("Invalid mailbox") ||
+        message.includes("ProduceOverlay")) {
+      return; // Suppress these warnings
+    }
     log(`Renderer Console [${level}]: ${message} (${sourceId}:${line})`);
   });
 
@@ -182,6 +190,11 @@ function createWindow() {
 
   log('Application started');
 }
+
+// Suppress harmless Electron/Chromium warnings
+app.commandLine.appendSwitch('disable-features', 'AutofillServerCommunication');
+app.commandLine.appendSwitch('disable-gpu-sandbox');
+app.commandLine.appendSwitch('ignore-gpu-blacklist');
 
 // Initialize paths when app is ready
 app.whenReady().then(async () => {
