@@ -4231,6 +4231,16 @@ function returnToSetupScreen() {
   checkStartButton();
 }
 
+/**
+ * Restart the application by reloading the page
+ * This clears all state and reinitializes everything
+ */
+function restartApplication() {
+  log('Restarting application...');
+  // Reload the page to restart the application
+  location.reload();
+}
+
 function showCloseConfirmationDialog() {
   // Check if there are any new entries (new entries in audit mode, or any entries in entry mode)
   const hasNewData = state.mode === 'audit'
