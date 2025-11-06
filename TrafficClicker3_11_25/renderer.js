@@ -2248,20 +2248,22 @@ function initializeCounting() {
       }
     }
 
-    // Arrow keys for speed control
-    if (e.code === 'ArrowLeft') {
-      e.preventDefault();
-      decreaseSpeed();
-    } else if (e.code === 'ArrowRight') {
-      e.preventDefault();
-      increaseSpeed();
-    } else if (e.code === 'ArrowUp') {
-      e.preventDefault();
-      resetSpeed();
-    } else if (e.code === 'ArrowDown') {
-      e.preventDefault();
-      state.videoElement.pause();
-      resetSpeed();
+    // Arrow keys for speed control (only if video element exists)
+    if (state.videoElement) {
+      if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        decreaseSpeed();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        increaseSpeed();
+      } else if (e.code === 'ArrowUp') {
+        e.preventDefault();
+        resetSpeed();
+      } else if (e.code === 'ArrowDown') {
+        e.preventDefault();
+        state.videoElement.pause();
+        resetSpeed();
+      }
     }
 
     // Minus key (-) for 60-second rewind and recap (works during recap too)
