@@ -28,8 +28,8 @@ An Electron application for video traffic counting and data collection. TrafficC
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/TrafficClicker.git
-cd TrafficClicker
+git clone https://github.com/d1vyan5hu/Constructive-Counter.git
+cd Constructive-Counter
 ```
 
 2. Install dependencies:
