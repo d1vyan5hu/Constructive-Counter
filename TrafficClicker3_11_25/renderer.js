@@ -124,6 +124,29 @@ function validateConfig(config) {
   if (config.steps.length === 0) {
     errors.push('Config must have at least one step');
   }
+
+  // Validate setupFields if present
+  if (config.setupFields !== undefined) {
+    if (!Array.isArray(config.setupFields)) {
+      errors.push('setupFields must be an array');
+    } else {
+      const validFieldIds = ['street-name', 'guid', 'site-description'];
+      config.setupFields.forEach((field, index) => {
+        if (typeof field !== 'object' || field === null) {
+          errors.push(`setupFields[${index}] must be an object`);
+        } else {
+          if (!field.id || typeof field.id !== 'string') {
+            errors.push(`setupFields[${index}] must have a string "id" property`);
+          } else if (!validFieldIds.includes(field.id)) {
+            errors.push(`setupFields[${index}].id must be one of: ${validFieldIds.join(', ')}`);
+          }
+          if (field.label && typeof field.label !== 'string') {
+            errors.push(`setupFields[${index}].label must be a string`);
+          }
+        }
+      });
+    }
+  }
   
   config.steps.forEach((step, index) => {
     if (!step.step_id) {
@@ -506,6 +529,10 @@ function initializeSetup() {
       state.configPath = result.path;
       elements.configStatus.textContent = `Loaded: ${result.path.split('/').pop()}`;
       elements.configStatus.classList.add('loaded');
+      
+      // Update setup fields based on config
+      updateSetupFieldsFromConfig(result.config);
+      
       checkStartButton();
       showToast('Config file loaded successfully', 'success');
     } else if (!result.canceled) {

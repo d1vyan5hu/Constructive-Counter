@@ -1245,21 +1245,23 @@
         <div class="file-status" id="video-status">No video file loaded</div>
       </div>
 
-      <div class="setup-group">
-        <label class="setup-label" for="street-name">Street Name</label>
+      <!-- Dynamic setup fields (Street Name, GUID, Description) - controlled by config -->
+      <div class="setup-group" id="setup-field-street-name" style="display: none;">
+        <label class="setup-label" for="street-name" id="setup-label-street-name">Street Name</label>
         <input type="text" class="setup-input" id="street-name" placeholder="Enter street name">
       </div>
 
-      <div class="setup-group">
-        <label class="setup-label" for="guid">GUID</label>
+      <div class="setup-group" id="setup-field-guid" style="display: none;">
+        <label class="setup-label" for="guid" id="setup-label-guid">GUID</label>
         <input type="text" class="setup-input" id="guid" placeholder="Enter GUID">
       </div>
 
-      <div class="setup-group">
-        <label class="setup-label" for="site-description">Site Description</label>
+      <div class="setup-group" id="setup-field-site-description" style="display: none;">
+        <label class="setup-label" for="site-description" id="setup-label-site-description">Site Description</label>
         <textarea class="setup-textarea" id="site-description" placeholder="Enter site description"></textarea>
       </div>
 
+      <!-- Video Start Time - always visible, not configurable -->
       <div class="setup-group">
         <label class="setup-label" for="video-start-time">Video Start Time</label>
         <input type="text" class="setup-input" id="video-start-time" placeholder="e.g., 7:00:00 AM or 07:00:00 (24hr)" value="">
