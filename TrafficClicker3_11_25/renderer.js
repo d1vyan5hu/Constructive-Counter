@@ -2021,18 +2021,43 @@ function initializeCounting() {
           enableVideoClicks();
         } else {
           // Video not ready yet - wait for it to load
-          log('Video not ready when space pressed, waiting for metadata...');
+          log(`Video not ready when space pressed (readyState: ${state.videoElement.readyState}), waiting for metadata...`);
+          
+          // Check if video source is set
+          if (!state.videoElement.src || state.videoElement.src === '') {
+            log('Video source not set, attempting to set it...');
+            if (state.isStreaming && state.videoUrl) {
+              state.videoElement.src = state.videoUrl;
+              state.videoElement.load();
+            } else if (state.videoPath) {
+              state.videoElement.src = state.videoPath;
+              state.videoElement.load();
+            } else {
+              log('No video source available');
+              showToast('Video source not available. Please load a video.', 'error');
+              return;
+            }
+          }
+          
+          let waitCount = 0;
+          const MAX_WAIT_COUNT = 100; // Max 10 seconds (100 * 100ms)
+          
           const waitForReady = () => {
+            waitCount++;
             if (state.videoElement && state.videoElement.readyState >= 2) {
+              log(`Video ready after ${waitCount * 100}ms, starting playback`);
               state.videoElement.play().catch(err => {
                 log(`Error playing video after waiting: ${err.message}`);
                 showToast('Error playing video. Please check the video file.', 'error');
               });
               state.videoElement.playbackRate = state.playbackSpeed;
               enableVideoClicks();
-            } else if (state.videoElement) {
-              // Wait a bit more (max 5 seconds)
+            } else if (state.videoElement && waitCount < MAX_WAIT_COUNT) {
+              // Wait a bit more
               setTimeout(waitForReady, 100);
+            } else {
+              log(`Video still not ready after ${waitCount * 100}ms (readyState: ${state.videoElement?.readyState || 'N/A'})`);
+              showToast('Video is taking too long to load. Please check your connection or video file.', 'warning');
             }
           };
           // Also listen for loadedmetadata event as backup
