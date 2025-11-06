@@ -3101,7 +3101,7 @@ function showStatisticsDashboard(entries) {
   if (processAnotherBtn) {
     processAnotherBtn.onclick = () => {
       modal.classList.remove('active');
-      returnToSetupScreen();
+      restartApplication();
     };
   }
 
@@ -4238,8 +4238,8 @@ function showCloseConfirmationDialog() {
     : state.masterLog.length > 0;
 
   if (!hasNewData) {
-    // No new data, just go back
-    returnToSetupScreen();
+    // No new data, restart the app
+    restartApplication();
     return;
   }
 
@@ -4263,10 +4263,10 @@ function showCloseConfirmationDialog() {
     // User chose to go back unsaved (Cancel button)
     // Double confirm to prevent accidental data loss
     const confirmLoss = confirm(
-      '⚠️ WARNING: All unsaved data will be lost!\n\nAre you sure you want to go back without saving?'
+      '⚠️ WARNING: All unsaved data will be lost!\n\nAre you sure you want to restart without saving?'
     );
     if (confirmLoss) {
-      returnToSetupScreen();
+      restartApplication();
     }
     // If user cancels the second confirmation, stay on video screen
   }
