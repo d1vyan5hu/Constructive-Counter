@@ -717,84 +717,39 @@ function initializeSetup() {
 
     initializeVideo();
     
-    // Restore video position and start recap if session was loaded
-    if (state.savedVideoPosition > 0 && state.videoElement && state.masterLog.length > 0) {
+    // Restore video position and entries if session was loaded
+    if (state.savedVideoPosition > 0 && state.videoElement) {
       state.videoElement.addEventListener('loadedmetadata', function onLoadedMetadata() {
         state.videoElement.removeEventListener('loadedmetadata', onLoadedMetadata);
         
-        // Get last 3 entries (sorted by time)
-        const sortedEntries = [...state.masterLog]
-          .filter(e => e && e.playback_time_seconds !== undefined)
-          .sort((a, b) => parseFloat(a.playback_time_seconds) - parseFloat(b.playback_time_seconds));
+        // Seek to exact saved position
+        const seekTime = Math.max(0, Math.min(state.savedVideoPosition, state.videoElement.duration));
+        state.videoElement.currentTime = seekTime;
         
-        const last3Entries = sortedEntries.slice(-3);
-        
-        if (last3Entries.length > 0) {
-          // Find the earliest and latest of the last 3 entries
-          const firstEntryTime = last3Entries[0].playback_time_seconds;
-          const lastEntryTime = last3Entries[last3Entries.length - 1].playback_time_seconds;
+        state.videoElement.addEventListener('seeked', function onSeeked() {
+          state.videoElement.removeEventListener('seeked', onSeeked);
           
-          // Set recap end time to the latest entry of the last 3
-          state.recapEndTime = lastEntryTime;
-          state.isRewinding = true;
-          state.recapCompleted = false;
-          
-          // Start recap from 60 seconds before the first of the last 3 entries, or from saved position if it's earlier
-          const recapStartTime = Math.max(0, Math.min(state.savedVideoPosition, firstEntryTime - 60));
-          
-          // Seek to recap start position
-          state.videoElement.currentTime = recapStartTime;
-          
-          state.videoElement.addEventListener('seeked', function onSeeked() {
-            state.videoElement.removeEventListener('seeked', onSeeked);
-            
-            // Pre-add ALL last 3 entries to activeDots for recap
-            const now = Date.now();
-            last3Entries.forEach(entry => {
-              const entryTime = entry.playback_time_seconds;
-              if (!state.activeDots.has(entry.entryId)) {
-                state.activeDots.set(entry.entryId, {
-                  color: 'orange',
-                  startTime: now,
-                  phase: 'rewind',
-                  entryTime: entryTime
-                });
-              }
-            });
-            
-            // Update UI
-            updateVideoTimeDisplay();
-            updateLogsPanel();
-            if (elements.entryCountBadge) {
-              elements.entryCountBadge.textContent = `Entries: ${state.masterLog.length}`;
-            }
-            drawRedDots();
-            
-            // Hide instruction message
-            if (elements.instructionMessage) {
-              elements.instructionMessage.classList.add('hidden');
-            }
-            
-            // Automatically start playing the recap
-            state.spacePressed = true; // Enable clicks
-            state.videoElement.play();
-            state.videoElement.playbackRate = state.playbackSpeed;
-            
-            showToast(`Recap: Showing last ${last3Entries.length} entries`, 'info', 3000);
-            log(`Session restored: Recap started from ${recapStartTime.toFixed(2)}s to ${state.recapEndTime.toFixed(2)}s (last ${last3Entries.length} entries)`);
-          }, { once: true });
-        } else {
-          // No entries, just restore position
-          state.videoElement.currentTime = Math.max(0, Math.min(state.savedVideoPosition, state.videoElement.duration));
-          state.videoElement.playbackRate = state.playbackSpeed;
+          // Update UI
           updateVideoTimeDisplay();
           updateLogsPanel();
           if (elements.entryCountBadge) {
             elements.entryCountBadge.textContent = `Entries: ${state.masterLog.length}`;
           }
           drawRedDots();
-          showToast('Session restored', 'success', 2000);
-        }
+          
+          // Hide instruction message
+          if (elements.instructionMessage) {
+            elements.instructionMessage.classList.add('hidden');
+          }
+          
+          // Automatically start playing from saved position
+          state.spacePressed = true; // Enable clicks
+          state.videoElement.play();
+          state.videoElement.playbackRate = state.playbackSpeed;
+          
+          showToast(`Session restored: Playing from ${formatTime(seekTime)}`, 'success', 3000);
+          log(`Session restored: Video position ${seekTime.toFixed(2)}s, ${state.masterLog.length} entries`);
+        }, { once: true });
       }, { once: true });
     } else if (state.masterLog.length > 0) {
       // Session loaded but no saved position - just restore entries
@@ -826,22 +781,35 @@ function initializeSetup() {
 
     if (!state.config || !state.videoPath || !state.auditCsvPath) return;
 
-    // Clear previous session data (except original entries from CSV)
+    // Restore session data if available, otherwise clear (new session)
+    if (state.pendingSessionData) {
+      state.masterLog = state.pendingSessionData.entries || [];
+      state.newEntries = state.pendingSessionData.newEntries || [];
+      state.deletedEntryIds = state.pendingSessionData.deletedEntryIds || new Set();
+      state.originalEntries = state.pendingSessionData.originalEntries || state.originalEntries;
+      state.playbackSpeed = state.pendingSessionData.playbackSpeed || 1.0;
+      state.entryCounter = state.pendingSessionData.entryCounter || 0;
+      state.savedVideoPosition = state.pendingSessionData.videoPosition || 0;
+      state.pendingSessionData = null; // Clear after use
+    } else {
+      // Clear previous session data (except original entries from CSV)
+      state.newEntries = [];
+      state.deletedEntryIds.clear();
+      state.entryCounter = 0;
+      state.savedVideoPosition = 0;
+      // Load original entries into masterLog for audit
+      state.masterLog = [...state.originalEntries];
+    }
+
     state.currentEntry = null;
     state.currentStepIndex = 0;
     state.activeDots.clear();
     state.dotTimeouts.forEach(timeout => clearTimeout(timeout));
     state.dotTimeouts.clear();
-    state.entryCounter = 0;
-    state.newEntries = [];
-    state.deletedEntryIds.clear();
     state.isRewinding = false;
     state.recapEndTime = null;
     state.recapCompleted = false;
     state.rewindStartTime = null;
-
-    // Load original entries into masterLog for audit
-    state.masterLog = [...state.originalEntries];
 
     // Close any open modal
     if (elements.choiceModal) {
@@ -880,28 +848,64 @@ function initializeSetup() {
     state.isRewinding = true; // Enable rewind mode for dots
     state.spacePressed = false; // Don't enable clicks until SPACE is pressed
 
-    // Wait for video to be ready, then ensure it's paused
-    let ensurePausedRetryCount = 0;
-    const MAX_ENSURE_PAUSED_RETRIES = 50; // Max 5 seconds (50 * 100ms)
-    
-    const ensurePaused = () => {
-      if (state.videoElement && state.videoElement.readyState >= 2) {
-        // Video metadata is loaded
-        if (!state.videoElement.paused) {
-          state.videoElement.pause();
-        }
-        updateLogsPanel(); // Show original entries in log
-      } else {
-        // Wait a bit and try again, with retry limit
-        if (ensurePausedRetryCount < MAX_ENSURE_PAUSED_RETRIES) {
-          ensurePausedRetryCount++;
-          setTimeout(ensurePaused, 100);
+    // Restore video position if session was loaded
+    if (state.savedVideoPosition > 0 && state.videoElement) {
+      state.videoElement.addEventListener('loadedmetadata', function onLoadedMetadata() {
+        state.videoElement.removeEventListener('loadedmetadata', onLoadedMetadata);
+        
+        // Seek to exact saved position
+        const seekTime = Math.max(0, Math.min(state.savedVideoPosition, state.videoElement.duration));
+        state.videoElement.currentTime = seekTime;
+        
+        state.videoElement.addEventListener('seeked', function onSeeked() {
+          state.videoElement.removeEventListener('seeked', onSeeked);
+          
+          // Update UI
+          updateVideoTimeDisplay();
+          updateLogsPanel();
+          if (elements.entryCountBadge) {
+            elements.entryCountBadge.textContent = `Entries: ${state.masterLog.length}`;
+          }
+          drawRedDots();
+          
+          // Hide instruction message
+          if (elements.instructionMessage) {
+            elements.instructionMessage.classList.add('hidden');
+          }
+          
+          // Automatically start playing from saved position
+          state.spacePressed = true; // Enable clicks
+          state.videoElement.play();
+          state.videoElement.playbackRate = state.playbackSpeed;
+          
+          showToast(`Session restored: Playing from ${formatTime(seekTime)}`, 'success', 3000);
+          log(`Session restored (audit): Video position ${seekTime.toFixed(2)}s, ${state.masterLog.length} entries`);
+        }, { once: true });
+      }, { once: true });
+    } else {
+      // Wait for video to be ready, then ensure it's paused
+      let ensurePausedRetryCount = 0;
+      const MAX_ENSURE_PAUSED_RETRIES = 50; // Max 5 seconds (50 * 100ms)
+      
+      const ensurePaused = () => {
+        if (state.videoElement && state.videoElement.readyState >= 2) {
+          // Video metadata is loaded
+          if (!state.videoElement.paused) {
+            state.videoElement.pause();
+          }
+          updateLogsPanel(); // Show original entries in log
         } else {
-          log('Warning: Video pause check timeout - video metadata may not be loaded');
+          // Wait a bit and try again, with retry limit
+          if (ensurePausedRetryCount < MAX_ENSURE_PAUSED_RETRIES) {
+            ensurePausedRetryCount++;
+            setTimeout(ensurePaused, 100);
+          } else {
+            log('Warning: Video pause check timeout - video metadata may not be loaded');
+          }
         }
-      }
-    };
-    ensurePaused();
+      };
+      ensurePaused();
+    }
   });
 
   // Update start button state
@@ -3465,10 +3469,12 @@ function updateLogsPanel() {
 
     logEntry.textContent = `[${time}] ${ocr} | ${choices}`;
 
-    // In audit mode, make entries clickable for deletion
+    // In audit mode, make entries clickable for deletion (left click) and seeking (right click)
     if (state.mode === 'audit') {
       logEntry.style.cursor = 'pointer';
-      logEntry.title = isDeleted ? 'Click to restore entry' : 'Click to mark for deletion';
+      logEntry.title = isDeleted ? 'Left-click to restore entry, Right-click to seek to entry time' : 'Left-click to mark for deletion, Right-click to seek to entry time';
+      
+      // Left click: mark for deletion/restore
       logEntry.addEventListener('click', () => {
         // Save state for undo
         saveStateSnapshot();
@@ -3489,6 +3495,66 @@ function updateLogsPanel() {
         state.redoStack = [];
         
         updateLogsPanel();
+      });
+      
+      // Right click: seek to entry time and show green dot
+      logEntry.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        
+        if (!state.videoElement || entry.playback_time_seconds === undefined) {
+          showToast('Cannot seek: entry has no playback time', 'warning');
+          return;
+        }
+        
+        const entryTime = parseFloat(entry.playback_time_seconds);
+        if (isNaN(entryTime)) {
+          showToast('Cannot seek: invalid entry time', 'warning');
+          return;
+        }
+        
+        // Seek to entry time
+        state.videoElement.currentTime = entryTime;
+        
+        // Show green dot at entry location
+        const now = Date.now();
+        if (!state.activeDots.has(entry.entryId)) {
+          state.activeDots.set(entry.entryId, {
+            color: 'green',
+            startTime: now,
+            phase: 'finalized',
+            entryTime: entryTime
+          });
+        } else {
+          // Update existing dot to green
+          const dotInfo = state.activeDots.get(entry.entryId);
+          dotInfo.color = 'green';
+          dotInfo.phase = 'finalized';
+          dotInfo.startTime = now;
+        }
+        
+        // Remove dot after 1.75 seconds (same as finalized entries)
+        if (state.dotTimeouts.has(entry.entryId)) {
+          clearTimeout(state.dotTimeouts.get(entry.entryId));
+        }
+        const timeoutId = setTimeout(() => {
+          state.activeDots.delete(entry.entryId);
+          state.dotTimeouts.delete(entry.entryId);
+          drawRedDots();
+        }, 1750);
+        state.dotTimeouts.set(entry.entryId, timeoutId);
+        
+        // Update UI
+        updateVideoTimeDisplay();
+        drawRedDots();
+        highlightEntryInLog(entry.entryId, true);
+        
+        // Pause video if playing
+        if (!state.videoElement.paused) {
+          state.videoElement.pause();
+        }
+        
+        showToast(`Seeked to entry at ${formatTime(entryTime)}`, 'info', 2000);
+        log(`Seeked to entry ${entry.entryId} at ${entryTime.toFixed(2)}s`);
       });
     }
 
@@ -4155,9 +4221,23 @@ function formatTime(seconds) {
 // ============================================================================
 
 async function saveSession() {
-  if (!state.videoPath || state.masterLog.length === 0) {
-    showToast('No entries to save', 'warning');
+  if (!state.videoPath) {
+    showToast('No video loaded', 'warning');
     return;
+  }
+  
+  // In audit mode, allow saving if there are new entries or deleted entries, even if masterLog is empty
+  if (state.mode === 'audit') {
+    if (state.newEntries.length === 0 && state.deletedEntryIds.size === 0 && state.masterLog.length === 0) {
+      showToast('No changes to save', 'warning');
+      return;
+    }
+  } else {
+    // In entry mode, require entries
+    if (state.masterLog.length === 0) {
+      showToast('No entries to save', 'warning');
+      return;
+    }
   }
 
   // Get last entry time in 24hr format
