@@ -1,6 +1,6 @@
 {
   "name": "cr-clicker",
-  "version": "0.0.1",
+  "version": "1.0.0-beta",
   "description": "An Electron application for video traffic counting",
   "main": "main.js",
   "author": "CRClicker Contributors",
@@ -37,11 +37,7 @@
         }
       ],
       "hardenedRuntime": false,
-      "gatekeeperAssess": false,
-      "signIgnore": [
-        "node_modules/",
-        "*.node"
-      ]
+      "gatekeeperAssess": false
     },
     "dmg": {
       "title": "${productName} ${version}",
