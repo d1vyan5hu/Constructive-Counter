@@ -2021,17 +2021,25 @@ function initializeCounting() {
   
   state.eventListeners.keydown = (e) => {
     // Don't capture keys on setup screen (allow normal text input)
-    // Check both display style and counting screen active state
+    // Check if counting screen is active - if not, we're on setup screen
+    const isCountingScreenActive = elements.countingScreen && 
+      elements.countingScreen.classList.contains('active');
     const isSetupScreenVisible = elements.setupScreen && 
       (elements.setupScreen.style.display !== 'none' && 
-       !elements.countingScreen.classList.contains('active'));
+       elements.setupScreen.style.display !== '');
     
-    if (isSetupScreenVisible) {
+    // If counting screen is active, always process keys (even if setup screen is also visible)
+    if (!isCountingScreenActive && isSetupScreenVisible) {
       // Only prevent default for shortcuts that shouldn't work on setup screen
       if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'e')) {
         e.preventDefault();
       }
       return;
+    }
+    
+    // Ensure we're on counting screen before processing video controls
+    if (!isCountingScreenActive) {
+      return; // Not on counting screen, don't process video controls
     }
     
     if (e.code === 'Space' && !state.spacePressed) {
