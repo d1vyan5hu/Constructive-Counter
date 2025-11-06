@@ -1061,13 +1061,18 @@ function initializeVideo() {
   // Set video source - URL for streaming, file path for local files
   if (state.isStreaming && state.videoUrl) {
     state.videoElement.src = state.videoUrl;
+    log(`Video source set to streaming URL: ${state.videoUrl}`);
   } else {
     state.videoElement.src = state.videoPath;
+    log(`Video source set to file path: ${state.videoPath}`);
   }
 
   // Prevent autoplay - critical requirement
   state.videoElement.autoplay = false;
   state.videoElement.playsInline = true;
+  
+  // Ensure video starts loading (especially important for streaming URLs)
+  state.videoElement.load();
 
   // Add pause event listener to check for download replacement (only once)
   // Remove existing listener if any
