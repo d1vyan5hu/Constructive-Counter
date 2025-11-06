@@ -1,5 +1,5 @@
 /**
- * TrafficClicker - Renderer Process
+ * CRClicker - Renderer Process
  * 
  * Main renderer process handling UI interactions, video playback,
  * entry management, recap mode, and data export.

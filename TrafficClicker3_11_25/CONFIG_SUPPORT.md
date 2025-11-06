@@ -1,6 +1,6 @@
-# TrafficClicker Configuration Support
+# CRClicker Configuration Support
 
-This document describes all configuration features supported by TrafficClicker, including the latest additions for text input and conditional steps.
+This document describes all configuration features supported by CRClicker, including the latest additions for text input and conditional steps.
 
 ## Configuration File Structure
 

@@ -1,6 +1,6 @@
-# TrafficClicker
+# CRClicker
 
-An Electron application for video traffic counting and data collection. TrafficClicker allows users to efficiently count and categorize traffic events from video footage with customizable data collection workflows.
+An Electron application for video traffic counting and data collection. CRClicker allows users to efficiently count and categorize traffic events from video footage with customizable data collection workflows.
 
 ## Features
 
@@ -117,7 +117,7 @@ Press `-` (minus key) to enter recap mode:
 
 ## Configuration
 
-TrafficClicker uses JSON configuration files to define data collection workflows. See:
+CRClicker uses JSON configuration files to define data collection workflows. See:
 - `test-config.json` for a basic example
 - `CONFIG_GUIDE.md` for detailed configuration documentation
 - `CONFIG_SUPPORT.md` for advanced features (conditional steps, text input)
@@ -132,7 +132,7 @@ TrafficClicker uses JSON configuration files to define data collection workflows
 ## File Structure
 
 ```
-TrafficClicker/
+CRClicker/
 ├── main.js              # Electron main process
 ├── renderer.js          # Renderer process (UI logic)
 ├── index.html           # Application UI

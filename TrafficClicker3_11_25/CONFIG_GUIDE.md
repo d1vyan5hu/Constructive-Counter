@@ -1,6 +1,6 @@
-# TrafficClicker Config Guide
+# CRClicker Config Guide
 
-This guide explains how to create configuration files for TrafficClicker with support for text input and conditional steps.
+This guide explains how to create configuration files for CRClicker with support for text input and conditional steps.
 
 ## Basic Structure
 

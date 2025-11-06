@@ -1,5 +1,5 @@
 /**
- * TrafficClicker - Main Process
+ * CRClicker - Main Process
  * 
  * Electron main process handling window management, IPC communications,
  * file system operations, and video downloads.
@@ -24,7 +24,7 @@ let activeDownloads = new Map(); // Track active downloads by URL to prevent dup
  * Creates user data directory for logs and application data
  */
 function initializePaths() {
-  const userDataPath = app.getPath('userData'); // ~/Library/Application Support/TrafficClicker
+  const userDataPath = app.getPath('userData'); // ~/Library/Application Support/CRClicker
   appLogsPath = path.join(userDataPath, 'app-logs.txt');
 
   // Create user data directory structure
@@ -39,7 +39,7 @@ function initializePaths() {
 }
 
 /**
- * Ensure TrafficClicker folders exist in Movies and Documents
+ * Ensure CRClicker folders exist in Movies and Documents
  * Requests permissions if folder creation fails
  * @returns {Promise<Object>} Object with paths and existence status
  */
@@ -63,23 +63,23 @@ async function ensureTrafficClickerFolders() {
       documentsPath = path.join(app.getPath('home'), 'Documents');
     }
     
-    moviesTrafficClickerPath = path.join(moviesPath, 'TrafficClicker');
-    documentsTrafficClickerPath = path.join(documentsPath, 'TrafficClicker');
+    moviesTrafficClickerPath = path.join(moviesPath, 'CRClicker');
+    documentsTrafficClickerPath = path.join(documentsPath, 'CRClicker');
     
-    // Try to create Movies/TrafficClicker
+    // Try to create Movies/CRClicker
     try {
       if (!fs.existsSync(moviesTrafficClickerPath)) {
         fs.mkdirSync(moviesTrafficClickerPath, { recursive: true });
         log(`Created folder: ${moviesTrafficClickerPath}`);
       }
     } catch (error) {
-      log(`Failed to create Movies/TrafficClicker: ${error.message}`);
+      log(`Failed to create Movies/CRClicker: ${error.message}`);
       // Request permissions
       const result = await dialog.showMessageBox(mainWindow, {
         type: 'warning',
         title: 'Permission Required',
-        message: 'TrafficClicker needs access to your Movies folder',
-        detail: 'Please grant access to create the TrafficClicker folder in Movies.',
+        message: 'CRClicker needs access to your Movies folder',
+        detail: 'Please grant access to create the CRClicker folder in Movies.',
         buttons: ['Open System Preferences', 'Cancel']
       });
       if (result.response === 0) {
@@ -87,20 +87,20 @@ async function ensureTrafficClickerFolders() {
       }
     }
     
-    // Try to create Documents/TrafficClicker
+    // Try to create Documents/CRClicker
     try {
       if (!fs.existsSync(documentsTrafficClickerPath)) {
         fs.mkdirSync(documentsTrafficClickerPath, { recursive: true });
         log(`Created folder: ${documentsTrafficClickerPath}`);
       }
     } catch (error) {
-      log(`Failed to create Documents/TrafficClicker: ${error.message}`);
+      log(`Failed to create Documents/CRClicker: ${error.message}`);
       // Request permissions
       const result = await dialog.showMessageBox(mainWindow, {
         type: 'warning',
         title: 'Permission Required',
-        message: 'TrafficClicker needs access to your Documents folder',
-        detail: 'Please grant access to create the TrafficClicker folder in Documents.',
+        message: 'CRClicker needs access to your Documents folder',
+        detail: 'Please grant access to create the CRClicker folder in Documents.',
         buttons: ['Open System Preferences', 'Cancel']
       });
       if (result.response === 0) {
@@ -115,7 +115,7 @@ async function ensureTrafficClickerFolders() {
       documentsExists: fs.existsSync(documentsTrafficClickerPath)
     };
   } catch (error) {
-    log(`Error ensuring TrafficClicker folders: ${error.message}`);
+    log(`Error ensuring CRClicker folders: ${error.message}`);
     return {
       moviesPath: moviesTrafficClickerPath,
       documentsPath: documentsTrafficClickerPath,
@@ -189,7 +189,7 @@ app.whenReady().then(async () => {
   
   createWindow();
   
-  // Ensure TrafficClicker folders exist
+  // Ensure CRClicker folders exist
   await ensureTrafficClickerFolders();
   
   // Check for command-line arguments (URL)
@@ -319,7 +319,7 @@ ipcMain.handle('select-csv-file', async () => {
 });
 
 /**
- * Save session file to Documents/TrafficClicker/<Video Name> folder
+ * Save session file to Documents/CRClicker/<Video Name> folder
  * Creates video-specific subfolder if videoName is provided
  * @param {Object} sessionData - Session state to save
  * @param {string} filename - Filename for session file
@@ -329,7 +329,7 @@ ipcMain.handle('select-csv-file', async () => {
 ipcMain.handle('save-session-file', async (event, sessionData, filename, videoName) => {
   try {
     await ensureTrafficClickerFolders();
-    const basePath = documentsTrafficClickerPath || path.join(app.getPath('documents'), 'TrafficClicker');
+    const basePath = documentsTrafficClickerPath || path.join(app.getPath('documents'), 'CRClicker');
     
     // Create video-specific folder if videoName is provided
     let targetPath = basePath;
@@ -445,7 +445,7 @@ ipcMain.handle('load-csv-from-path', async (event, csvPath) => {
 });
 
 /**
- * Save CSV export to Documents/TrafficClicker/<Video Name> folder
+ * Save CSV export to Documents/CRClicker/<Video Name> folder
  * Creates video-specific subfolder if videoName is provided
  * @param {string} csvData - CSV content to save
  * @param {string} exportType - 'normal' or 'auditor'
@@ -454,7 +454,7 @@ ipcMain.handle('load-csv-from-path', async (event, csvPath) => {
  */
 ipcMain.handle('save-csv-export', async (event, csvData, exportType = 'normal', videoName) => {
   await ensureTrafficClickerFolders();
-  const basePath = documentsTrafficClickerPath || path.join(app.getPath('documents'), 'TrafficClicker');
+    const basePath = documentsTrafficClickerPath || path.join(app.getPath('documents'), 'CRClicker');
   
   // Create video-specific folder if videoName is provided
   let targetPath = basePath;
@@ -566,7 +566,7 @@ ipcMain.handle('cancel-all-downloads', async () => {
 });
 
 /**
- * Download video from URL to Movies/TrafficClicker folder
+ * Download video from URL to Movies/CRClicker folder
  * Tracks download progress and prevents duplicate downloads
  * @param {string} videoUrl - URL of video to download
  * @returns {Promise<Object>} Success status, file path, and download stats
@@ -585,9 +585,9 @@ ipcMain.handle('download-video-from-url', async (event, videoUrl) => {
     const urlObj = new URL(videoUrl);
     const filename = urlObj.pathname.split('/').pop() || 'video.mp4';
     
-    // Use Movies/TrafficClicker folder
+    // Use Movies/CRClicker folder
     await ensureTrafficClickerFolders();
-    const downloadsPath = moviesTrafficClickerPath || path.join(app.getPath('home'), 'Movies', 'TrafficClicker');
+    const downloadsPath = moviesTrafficClickerPath || path.join(app.getPath('home'), 'Movies', 'CRClicker');
     
     // Create downloads directory if it doesn't exist
     if (!fs.existsSync(downloadsPath)) {

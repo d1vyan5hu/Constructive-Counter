@@ -1,11 +1,11 @@
 # Changelog
 
-All notable changes to TrafficClicker will be documented in this file.
+All notable changes to CRClicker will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.3-beta] - 2025-01-XX
+## [0.0.1] - 2025-01-XX
 
 ### Added
 - Session save/load functionality (Cmd+S / Ctrl+S)
@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved dot indicator system with better visual feedback
 - Refactored codebase into modular structure (state.js, utils.js, recap.js, video-controls.js)
 - Improved error handling and logging throughout application
-- Updated file management to use ~/Movies/TrafficClicker and ~/Documents/TrafficClicker
+- Updated file management to use ~/Movies/CRClicker and ~/Documents/CRClicker
 - Export files now organized by video name in subfolders
 - Removed input validation on setup screen
 - Removed state persistence on setup screen
@@ -96,7 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History Notes
 
-- **1.0.3-beta**: Major feature release with session management, streaming, and improved UI
+- **0.0.1**: Initial open source release with session management, streaming, and improved UI
 - **1.0.2**: Recap mode and visual improvements
 - **1.0.1**: Initial stable release
 

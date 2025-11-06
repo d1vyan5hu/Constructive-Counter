@@ -1,9 +1,9 @@
 {
-  "name": "traffic-clicker",
-  "version": "1.0.3-beta",
+  "name": "cr-clicker",
+  "version": "0.0.1",
   "description": "An Electron application for video traffic counting",
   "main": "main.js",
-  "author": "TrafficClicker Contributors",
+  "author": "CRClicker Contributors",
   "license": "GPL-3.0",
   "scripts": {
     "start": "electron .",
@@ -22,8 +22,8 @@
   },
   "optionalDependencies": {},
   "build": {
-    "appId": "com.trafficclicker.app",
-    "productName": "TrafficClicker",
+    "appId": "com.crclicker.app",
+    "productName": "CRClicker",
     "mac": {
       "category": "public.app-category.utilities",
       "icon": "build/icon.icns",

@@ -1,14 +1,14 @@
-# Contributing to TrafficClicker
+# Contributing to CRClicker
 
-Thank you for your interest in contributing to TrafficClicker! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to CRClicker! This document provides guidelines and instructions for contributing.
 
 ## Getting Started
 
 1. **Fork the repository** on GitHub
 2. **Clone your fork** locally:
    ```bash
-   git clone https://github.com/your-username/TrafficClicker.git
-   cd TrafficClicker
+   git clone https://github.com/d1vyan5hu/Constructive-Counter.git
+   cd Constructive-Counter
    ```
 3. **Install dependencies**:
    ```bash
