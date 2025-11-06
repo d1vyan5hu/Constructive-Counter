@@ -2150,14 +2150,44 @@ function initializeCounting() {
         state.recapCompleted = false;
       }
 
-      if (state.videoElement && state.videoElement.readyState >= 2) {
-        if (state.videoElement.paused) {
-          state.videoElement.play().catch(err => {
-            log(`Error playing video: ${err.message}`);
-          });
-          state.videoElement.playbackRate = state.playbackSpeed;
+      // Normal play/pause toggle - always work if video element exists
+      if (state.videoElement) {
+        // Check if video is ready, if not wait a bit
+        if (state.videoElement.readyState >= 2) {
+          if (state.videoElement.paused) {
+            state.videoElement.play().catch(err => {
+              log(`Error playing video: ${err.message}`);
+            });
+            state.videoElement.playbackRate = state.playbackSpeed;
+          } else {
+            state.videoElement.pause();
+          }
         } else {
-          state.videoElement.pause();
+          // Video not ready yet, but user pressed space - try to load it
+          log(`Video not ready when space pressed for pause/play (readyState: ${state.videoElement.readyState})`);
+          if (!state.videoElement.src || state.videoElement.src === '') {
+            // Set source if missing
+            if (state.isStreaming && state.videoUrl) {
+              state.videoElement.src = state.videoUrl;
+              state.videoElement.load();
+            } else if (state.videoPath) {
+              state.videoElement.src = state.videoPath;
+              state.videoElement.load();
+            }
+          }
+          // Wait for metadata and then toggle
+          const onMetadataLoaded = () => {
+            state.videoElement.removeEventListener('loadedmetadata', onMetadataLoaded);
+            if (state.videoElement.paused) {
+              state.videoElement.play().catch(err => {
+                log(`Error playing video after metadata loaded: ${err.message}`);
+              });
+              state.videoElement.playbackRate = state.playbackSpeed;
+            } else {
+              state.videoElement.pause();
+            }
+          };
+          state.videoElement.addEventListener('loadedmetadata', onMetadataLoaded, { once: true });
         }
       }
     }
