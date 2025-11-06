@@ -1,0 +1,80 @@
+{
+  "name": "traffic-clicker",
+  "version": "1.0.3-beta",
+  "description": "An Electron application for video traffic counting",
+  "main": "main.js",
+  "author": "TrafficClicker Contributors",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:mac:dmg": "electron-builder --mac dmg",
+    "build:mac:unsigned": "electron-builder --mac dmg --config.mac.identity=null",
+    "build:mac:universal": "electron-builder --mac dmg --config.mac.identity=null --mac --x64 --arm64",
+    "build:mac:notarize": "electron-builder --mac --publish never",
+    "dist": "npm run build:mac:dmg"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "optionalDependencies": {},
+  "build": {
+    "appId": "com.trafficclicker.app",
+    "productName": "TrafficClicker",
+    "mac": {
+      "category": "public.app-category.utilities",
+      "icon": "build/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "signIgnore": [
+        "node_modules/",
+        "*.node"
+      ]
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "contents": [
+        {
+          "x": 410,
+          "y": 150,
+          "type": "link",
+          "path": "/Applications"
+        },
+        {
+          "x": 130,
+          "y": 150,
+          "type": "file"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "files": [
+      "**/*",
+      "!screenshots/**/*",
+      "!app-logs.txt",
+      "!*.md",
+      "!build/**/*",
+      "!dist/**/*",
+      "!.git/**/*"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    }
+  }
+}

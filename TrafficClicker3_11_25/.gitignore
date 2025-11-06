@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/icon.icns
+build/dmg-background.png
+
+# Logs
+*.log
+app-logs.txt
+
+# User data
+screenshots/
+traffic-data-export.csv
+*.csv
+
+# Environment
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Certificates and provisioning
+*.pem
+*.p12
+*.mobileprovision
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test files (optional - remove if you want to keep them)
+test-config copy.json
+TrafficClickerBuildPrompts.md
+

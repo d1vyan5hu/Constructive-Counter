@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrafficClicker</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #1e1e1e;
+      color: #e0e0e0;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    /* Setup Screen */
+    #setup-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      padding: 2rem;
+    }
+
+    .setup-container {
+      background: #2d2d2d;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .setup-title {
+      font-size: 2rem;
+      margin-bottom: 2rem;
+      text-align: center;
+      color: #fff;
+    }
+
+    .setup-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .setup-label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: #b0b0b0;
+      font-weight: 500;
+    }
+
+    .setup-input,
+    .setup-textarea {
+      width: 100%;
+      padding: 0.75rem;
+      background: #1e1e1e;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 1rem;
+    }
+
+    .setup-textarea {
+      min-height: 100px;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    .file-button {
+      width: 100%;
+      padding: 0.75rem;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-bottom: 0.5rem;
+    }
+
+    .file-button:hover {
+      background: #0052a3;
+    }
+
+    .file-button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+
+    .file-status {
+      font-size: 0.85rem;
+      color: #888;
+      margin-top: 0.25rem;
+    }
+
+    .file-status.loaded {
+      color: #4caf50;
+    }
+
+    .start-button {
+      width: 100%;
+      padding: 1rem;
+      background: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 1rem;
+    }
+
+    .start-button:hover:not(:disabled) {
+      background: #45a049;
+    }
+
+    .start-button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+
+    /* Counting Screen */
+    #counting-screen {
+      display: none;
+      height: 100vh;
+      width: 100vw;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+      flex-direction: row;
+    }
+
+    #counting-screen.active {
+      display: flex;
+    }
+
+    .video-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      padding: 0;
+    }
+
+    #video-player {
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+      max-height: 100vh;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* Canvas overlay for red dots */
+    #canvas-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      display: block;
+    }
+
+    /* Timestamp selector rectangle */
+
+    /* Instruction message */
+    #instruction-message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, rgba(30, 30, 30, 0.98) 0%, rgba(45, 45, 45, 0.98) 100%);
+      padding: 2.5rem;
+      border-radius: 12px;
+      text-align: center;
+      z-index: 20;
+      pointer-events: none;
+      border: 2px solid #0066cc;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      max-width: 500px;
+    }
+
+    #instruction-message h3 {
+      color: #fff;
+      margin-bottom: 1rem;
+      font-size: 1.3rem;
+    }
+
+    #instruction-message p {
+      color: #e0e0e0;
+      margin: 0.75rem 0;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    #instruction-message .highlight {
+      color: #00ff00;
+      font-weight: bold;
+    }
+
+    #instruction-message.hidden {
+      display: none;
+    }
+
+    /* Direction indicators */
+    .direction-indicator {
+      position: absolute;
+      background: #0066cc;
+      color: white;
+      font-weight: bold;
+      font-size: clamp(16px, 2vw, 24px);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: 2px solid #0052a3;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      cursor: move;
+      z-index: 15;
+      user-select: none;
+      transition: opacity 0.2s;
+    }
+
+    .direction-indicator:hover {
+      opacity: 0.8;
+    }
+
+    .direction-indicator.dragging {
+      opacity: 0.6;
+    }
+
+    /* Video time display */
+    #video-time-display {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      z-index: 15;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+    }
+
+    /* Speed display */
+    #speed-display {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 102, 204, 0.9);
+      color: white;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 15;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+    }
+
+    /* Entry count badge */
+    #entry-count-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(76, 175, 80, 0.9);
+      color: white;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 15;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      white-space: nowrap;
+    }
+
+    /* Keyboard shortcuts panel */
+    #shortcuts-panel {
+      position: absolute;
+      top: 60px;
+      right: 10px;
+      background: rgba(30, 30, 30, 0.95);
+      color: #e0e0e0;
+      padding: 1rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      z-index: 15;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      min-width: 200px;
+      max-width: 220px;
+      display: none;
+    }
+
+    #shortcuts-panel.visible {
+      display: block;
+    }
+
+    #shortcuts-panel h4 {
+      color: #fff;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+      border-bottom: 1px solid #444;
+      padding-bottom: 0.5rem;
+    }
+
+    #shortcuts-panel .shortcut-item {
+      margin: 0.4rem 0;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    #shortcuts-panel .shortcut-key {
+      background: #444;
+      padding: 0.2rem 0.4rem;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.7rem;
+    }
+
+    .close-video-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 40px;
+      height: 40px;
+      background: rgba(220, 50, 50, 0.9);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .close-video-button:hover {
+      background: rgba(255, 70, 70, 1);
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    }
+
+    .shortcut-toggle {
+      position: absolute;
+      top: 10px;
+      right: 180px;
+      background: rgba(30, 30, 30, 0.9);
+      color: #e0e0e0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      z-index: 15;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .shortcut-toggle:hover {
+      background: rgba(45, 45, 45, 0.9);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Logs panel */
+    #logs-panel {
+      width: 350px;
+      min-width: 250px;
+      max-width: 30vw;
+      background: #2d2d2d;
+      border-left: 1px solid #444;
+      padding: 1rem;
+      height: 100vh;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #logs-content {
+      overflow-y: auto;
+      flex: 1;
+      padding-right: 0.5rem;
+    }
+
+    #logs-content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #logs-content::-webkit-scrollbar-track {
+      background: #1e1e1e;
+      border-radius: 4px;
+    }
+
+    #logs-content::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 4px;
+    }
+
+    #logs-content::-webkit-scrollbar-thumb:hover {
+      background: #777;
+    }
+
+    .logs-title {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      color: #fff;
+      border-bottom: 2px solid #0066cc;
+      padding-bottom: 0.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logs-count {
+      background: #0066cc;
+      color: white;
+      padding: 0.2rem 0.6rem;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+
+    .log-entry {
+      background: #1e1e1e;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      border-left: 3px solid #0066cc;
+      transition: all 0.2s;
+    }
+
+    .log-entry:hover {
+      background: #252525;
+      border-left-color: #4caf50;
+      transform: translateX(2px);
+    }
+
+    .log-entry.new {
+      animation: highlightEntry 1s ease-out;
+    }
+
+    .log-entry.active {
+      background: #4caf50 !important;
+      border-left: 3px solid #00ff00 !important;
+      box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+      transform: translateX(4px);
+    }
+
+    .log-entry.streaming {
+      background: #2d5016 !important;
+      border-left: 3px solid #4caf50 !important;
+    }
+
+    @keyframes highlightEntry {
+      0% { background: #4caf50; }
+      100% { background: #1e1e1e; }
+    }
+
+    .export-button {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 100;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+      border: 2px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .export-button:hover {
+      background: linear-gradient(135deg, #45a049 0%, #3d8e40 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .export-button:active {
+      transform: translateY(0);
+    }
+
+    .export-button:disabled {
+      background: #555;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .restart-button {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 100;
+      transition: all 0.2s;
+      box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+      border: 2px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .restart-button:hover {
+      background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(255, 152, 0, 0.4);
+    }
+
+
+    /* Modal */
+    #url-input-modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #2d2d2d 0%, #1e1e1e 100%);
+      padding: 2.5rem;
+      border-radius: 16px;
+      z-index: 1000;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      min-width: 450px;
+      max-width: 600px;
+      border: 2px solid #0066cc;
+    }
+
+    #choice-modal {
+      display: none;
+      position: fixed;
+      padding: 1rem 1.25rem;
+      border-radius: 12px;
+      z-index: 1000;
+      min-width: 280px;
+      max-width: 400px;
+      /* Glass morphism effect - reduced blur for performance */
+      background: rgba(45, 45, 45, 0.85);
+      backdrop-filter: blur(10px) saturate(150%);
+      -webkit-backdrop-filter: blur(10px) saturate(150%);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 
+                  0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+      will-change: transform, opacity;
+    }
+
+    #url-input-modal.active {
+      display: block;
+      animation: modalAppear 0.3s ease-out;
+    }
+
+    #choice-modal.active {
+      display: block;
+      animation: choiceModalAppear 0.3s ease-out;
+    }
+
+    @keyframes modalAppear {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    @keyframes choiceModalAppear {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      margin-bottom: 0.75rem;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .choice-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+
+    .choice-button {
+      padding: 0.75rem 1rem;
+      background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+      border: 1px solid transparent;
+      text-align: left;
+    }
+
+    .choice-button:hover {
+      background: linear-gradient(135deg, #0052a3 0%, #003d7a 100%);
+      box-shadow: 0 2px 8px rgba(0, 102, 204, 0.3);
+    }
+
+    .choice-button:active {
+      background: linear-gradient(135deg, #003d7a 0%, #002d5c 100%);
+    }
+
+    .choice-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .choice-button:disabled:hover {
+      transform: none;
+      box-shadow: none;
+    }
+
+    .text-input {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1rem;
+      border: 2px solid #444;
+      border-radius: 8px;
+      background: #222;
+      color: #fff;
+      margin-bottom: 1rem;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+
+    .text-input:focus {
+      outline: none;
+      border-color: #0066cc;
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.2);
+    }
+
+    .text-input::placeholder {
+      color: #888;
+    }
+
+    .modal-step-info {
+      color: #aaa;
+      font-size: 0.8rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .modal-progress {
+      width: 100%;
+      height: 4px;
+      background: #444;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+
+    .modal-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #0066cc 0%, #4caf50 100%);
+      transition: width 0.3s ease;
+    }
+
+    /* Toast Notifications */
+    #toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: #2d2d2d;
+      color: #e0e0e0;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      min-width: 300px;
+      max-width: 500px;
+      pointer-events: auto;
+      border-left: 4px solid #0066cc;
+      animation: slideInRight 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .toast.success {
+      border-left-color: #4caf50;
+    }
+
+    .toast.error {
+      border-left-color: #f44336;
+    }
+
+    .toast.warning {
+      border-left-color: #ff9800;
+    }
+
+    .toast-info {
+      flex: 1;
+    }
+
+    .toast-close {
+      background: none;
+      border: none;
+      color: #888;
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .toast-close:hover {
+      color: #e0e0e0;
+    }
+
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideOutRight {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+
+    .toast.fade-out {
+      animation: slideOutRight 0.3s ease forwards;
+    }
+
+    /* Statistics Dashboard Modal */
+    .stats-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stats-modal.active {
+      display: flex;
+    }
+
+    .stats-content {
+      background: #2d2d2d;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      width: 90%;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .stats-content h2 {
+      margin-bottom: 1.5rem;
+      color: #fff;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: #1e1e1e;
+      padding: 1rem;
+      border-radius: 8px;
+      border-left: 4px solid #0066cc;
+    }
+
+    .stat-card h3 {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-card .value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .stats-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1.5rem;
+    }
+
+    .stats-table th,
+    .stats-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #444;
+    }
+
+    .stats-table th {
+      background: #1e1e1e;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .stats-table tr:hover {
+      background: #1e1e1e;
+    }
+
+    .stats-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+
+    .stats-button {
+      padding: 0.75rem 1.5rem;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .stats-button:hover {
+      background: #0052a3;
+    }
+
+    .stats-button.secondary {
+      background: #555;
+    }
+
+    .stats-button.secondary:hover {
+      background: #666;
+    }
+
+    /* Keyboard Shortcuts Modal */
+    .shortcuts-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .shortcuts-modal.active {
+      display: flex;
+    }
+
+    .shortcuts-content {
+      background: #2d2d2d;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      width: 90%;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .shortcuts-content h2 {
+      margin-bottom: 1.5rem;
+      color: #fff;
+    }
+
+    .shortcut-item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      border-bottom: 1px solid #444;
+    }
+
+    .shortcut-item-row:last-child {
+      border-bottom: none;
+    }
+
+    .shortcut-desc {
+      color: #e0e0e0;
+    }
+
+    .shortcut-key {
+      background: #1e1e1e;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    .shortcuts-close-btn {
+      margin-top: 1.5rem;
+      width: 100%;
+      padding: 0.75rem;
+      background: #555;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .shortcuts-close-btn:hover {
+      background: #666;
+    }
+
+    /* Input Validation Styles */
+    .input-error {
+      border-color: #f44336 !important;
+      background: rgba(244, 67, 54, 0.1) !important;
+    }
+
+    .error-message {
+      color: #f44336;
+      font-size: 0.85rem;
+      margin-top: 0.25rem;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    /* Entry Management Modal */
+    .entry-management-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1001;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .entry-management-modal.active {
+      display: flex;
+    }
+
+    .entry-management-content {
+      background: #2d2d2d;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 900px;
+      max-height: 90vh;
+      overflow-y: auto;
+      width: 90%;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .entry-management-controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .entry-search-input {
+      flex: 1;
+      min-width: 200px;
+      padding: 0.75rem;
+      background: #1e1e1e;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 1rem;
+    }
+
+    .entry-filter-select {
+      padding: 0.75rem;
+      background: #1e1e1e;
+      border: 1px solid #444;
+      border-radius: 6px;
+      color: #e0e0e0;
+      font-size: 1rem;
+      min-width: 150px;
+    }
+
+    .entry-filter-btn {
+      padding: 0.75rem 1.5rem;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .entry-filter-btn:hover {
+      background: #0052a3;
+    }
+
+    .entry-management-list {
+      max-height: 400px;
+      overflow-y: auto;
+      margin-bottom: 1.5rem;
+    }
+
+    .entry-management-item {
+      background: #1e1e1e;
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      border-radius: 6px;
+      border-left: 4px solid #0066cc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .entry-management-item:hover {
+      background: #252525;
+    }
+
+    .entry-management-item-info {
+      flex: 1;
+    }
+
+    .entry-management-item-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .entry-edit-btn, .entry-delete-btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .entry-edit-btn {
+      background: #4caf50;
+      color: white;
+    }
+
+    .entry-edit-btn:hover {
+      background: #45a049;
+    }
+
+    .entry-delete-btn {
+      background: #f44336;
+      color: white;
+    }
+
+    .entry-delete-btn:hover {
+      background: #da190b;
+    }
+
+    .entry-management-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+    }
+
+    .entry-management-btn {
+      padding: 0.75rem 1.5rem;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .entry-management-btn:hover {
+      background: #0052a3;
+    }
+
+    .entry-management-btn.secondary {
+      background: #555;
+    }
+
+    .entry-management-btn.secondary:hover {
+      background: #666;
+    }
+
+    /* Export Progress Bar */
+    .export-progress {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.9);
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      z-index: 10000;
+      display: none;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-width: 300px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    .export-progress.active {
+      display: flex;
+    }
+
+    .export-progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background: #444;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .export-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #0066cc 0%, #4caf50 100%);
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    .export-progress-text {
+      color: #e0e0e0;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <!-- Setup Screen -->
+  <div id="setup-screen">
+    <div class="setup-container">
+      <h1 class="setup-title">TrafficClicker Setup</h1>
+      <div class="setup-group">
+        <label class="setup-label">Mode</label>
+        <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <input type="radio" name="mode" value="entry" id="mode-entry" checked>
+            <span>Entry Mode</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <input type="radio" name="mode" value="audit" id="mode-audit">
+            <span>Audit Mode</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setup-group">
+        <button class="file-button" id="load-config-btn">Load Config File (JSON)</button>
+        <div class="file-status" id="config-status">No config file loaded</div>
+      </div>
+
+      <div class="setup-group" id="csv-loader-group" style="display: none;">
+        <button class="file-button" id="load-csv-btn">Load CSV File (Audit)</button>
+        <div class="file-status" id="csv-status">No CSV file loaded</div>
+      </div>
+
+      <div class="setup-group">
+        <button class="file-button" id="load-video-btn">Load Video File</button>
+        <button class="file-button" id="load-video-url-btn" style="background: #9c27b0;">Load Video from URL</button>
+        <button class="file-button" id="load-session-btn" style="background: #4caf50;">Load Session</button>
+        <div class="file-status" id="video-status">No video file loaded</div>
+      </div>
+
+      <div class="setup-group">
+        <label class="setup-label" for="street-name">Street Name</label>
+        <input type="text" class="setup-input" id="street-name" placeholder="Enter street name">
+      </div>
+
+      <div class="setup-group">
+        <label class="setup-label" for="guid">GUID</label>
+        <input type="text" class="setup-input" id="guid" placeholder="Enter GUID">
+      </div>
+
+      <div class="setup-group">
+        <label class="setup-label" for="site-description">Site Description</label>
+        <textarea class="setup-textarea" id="site-description" placeholder="Enter site description"></textarea>
+      </div>
+
+      <div class="setup-group">
+        <label class="setup-label" for="video-start-time">Video Start Time</label>
+        <input type="text" class="setup-input" id="video-start-time" placeholder="e.g., 7:00:00 AM or 07:00:00 (24hr)" value="">
+        <div class="file-status" style="margin-top: 0.25rem; font-size: 0.85rem; color: #888;">
+          When video playback is at 00:00:00, this is the actual footage time
+        </div>
+      </div>
+
+      <button class="start-button" id="start-counting-btn" disabled>Start Counting</button>
+      <button class="start-button" id="start-audit-btn" disabled style="display: none; background: #ff8800;">Start Audit</button>
+    </div>
+  </div>
+
+  <!-- Counting Screen -->
+  <div id="counting-screen">
+    <button id="close-video-btn" class="close-video-button" title="Close video and return to setup">✕</button>
+    <div class="video-container" id="video-container">
+      <div id="instruction-message">
+        <h3>🚦 Ready to Count Traffic</h3>
+        <p><span class="highlight">Step 1:</span> Drag the <span class="highlight">N, S, E, W direction indicators</span> to position them on the video to match your camera view</p>
+        <p><span class="highlight">Step 2:</span> Press <span class="highlight">SPACE</span> to start playing and begin counting</p>
+        <p style="margin-top: 1rem; font-size: 0.9rem; color: #888;">Click on the video to log vehicles, then select their attributes</p>
+      </div>
+
+      <video id="video-player" preload="metadata"></video>
+      <canvas id="canvas-overlay"></canvas>
+      
+
+      <div class="direction-indicator" id="dir-n" data-direction="north">N</div>
+      <div class="direction-indicator" id="dir-s" data-direction="south">S</div>
+      <div class="direction-indicator" id="dir-e" data-direction="east">E</div>
+      <div class="direction-indicator" id="dir-w" data-direction="west">W</div>
+
+      <div id="video-time-display">Time: 00:00 / 00:00 (Left: 00:00)</div>
+      <div id="speed-display">Speed: 1.0x</div>
+      <div id="entry-count-badge">Entries: 0</div>
+      <button class="shortcut-toggle" id="shortcut-toggle">⌨️ Shortcuts</button>
+      <div id="shortcuts-panel">
+        <h4>Keyboard Shortcuts</h4>
+        <div class="shortcut-item">
+          <span>Start/Pause</span>
+          <span class="shortcut-key">SPACE</span>
+        </div>
+        <div class="shortcut-item">
+          <span>Speed ↓</span>
+          <span class="shortcut-key">←</span>
+        </div>
+        <div class="shortcut-item">
+          <span>Speed ↑</span>
+          <span class="shortcut-key">→</span>
+        </div>
+        <div class="shortcut-item">
+          <span>Reset Speed</span>
+          <span class="shortcut-key">↑</span>
+        </div>
+        <div class="shortcut-item">
+          <span>Pause & Reset</span>
+          <span class="shortcut-key">↓</span>
+        </div>
+        <div class="shortcut-item">
+          <span>Rewind 60s & Recap</span>
+          <span class="shortcut-key">-</span>
+        </div>
+        <div class="shortcut-item">
+          <span>Undo Entry</span>
+          <span class="shortcut-key">Ctrl+Z</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="logs-panel">
+      <div class="logs-title">
+        <span>Entries Log</span>
+        <span class="logs-count" id="logs-count">0</span>
+      </div>
+      <div id="logs-content"></div>
+    </div>
+
+    <button class="export-button" id="export-btn">Export Data</button>
+    <button class="restart-button" id="restart-counting-btn">Restart Counting from 0</button>
+  </div>
+
+  <!-- Choice Modal -->
+  <div id="choice-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-question"></div>
+    </div>
+    <div class="modal-progress">
+      <div class="modal-progress-bar" id="modal-progress-bar"></div>
+    </div>
+    <div class="modal-step-info" id="modal-step-info"></div>
+    <div class="choice-buttons" id="choice-buttons"></div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Export Progress Bar -->
+  <div id="export-progress" class="export-progress">
+    <div class="export-progress-text" id="export-progress-text">Exporting...</div>
+    <div class="export-progress-bar-container">
+      <div class="export-progress-bar" id="export-progress-bar"></div>
+    </div>
+  </div>
+
+  <!-- Statistics Dashboard Modal -->
+  <div id="stats-modal" class="stats-modal">
+    <div class="stats-content">
+      <h2>Export Statistics</h2>
+      <div id="stats-content"></div>
+      <div class="stats-actions">
+        <button id="stats-process-another-btn" class="stats-button">Process Another Video</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- URL Input Modal -->
+  <div id="url-input-modal" class="choice-modal">
+    <div class="modal-header">
+      <div class="modal-title">Load Video from URL</div>
+    </div>
+    <div style="padding: 2rem;">
+      <input type="url" id="url-input-field" class="setup-input" placeholder="Enter video URL (e.g., https://example.com/video.mp4)" style="width: 100%; margin-bottom: 1rem; padding: 0.75rem; font-size: 1rem;">
+      <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+        <button id="url-input-cancel-btn" class="stats-button secondary" style="margin: 0;">Cancel</button>
+        <button id="url-input-submit-btn" class="stats-button" style="margin: 0;">Load & Download</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Keyboard Shortcuts Modal -->
+  <div id="shortcuts-modal" class="shortcuts-modal">
+    <div class="shortcuts-content">
+      <h2>Keyboard Shortcuts</h2>
+      <div id="shortcuts-list"></div>
+      <button id="shortcuts-close-btn" class="shortcuts-close-btn">Close (Esc)</button>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

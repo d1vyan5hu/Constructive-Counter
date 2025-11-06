@@ -1,0 +1,37 @@
+{
+  "steps": [
+    {
+      "step_id": "CrossWalkApproach",
+      "question": "CrossWalk Approach",
+      "choices": [
+        {"value": "North", "label": "North"},
+        {"value": "South", "label": "South"},
+        {"value": "East", "label": "East"},
+        {"value": "West", "label": "West"}
+      ]
+    },
+    {
+      "step_id": "AgeGroup",
+      "question": "Age Group?",
+      "choices": [
+        {"value": "Children", "label": "Child (0-12)"},
+        {"value": "YoungAdult", "label": "Young Adult (13-40)"},
+        {"value": "OlderAdult", "label": "Older Adult (41-64)"},
+        {"value": "Senior", "label": "Senior (65+)"},
+        {"value": "PersonsUsingMobileAssistantDevices", "label": "Persons Using Mobile Assistant Devices"}
+      ]
+    },
+    
+    {
+      "step_id": "Comments",
+      "question": "Device Comments?",
+      "type": "text",
+      "placeholder": "Enter Mobility Assistant Device Type",
+      "submitLabel": "Continue",
+      "condition": {
+        "step_id": "AgeGroup",
+        "value": "PersonsUsingMobileAssistantDevices"
+      }
+    }
+  ]
+}

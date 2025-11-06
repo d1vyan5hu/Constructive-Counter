@@ -1,0 +1,37 @@
+{
+  "steps": [
+    {
+      "step_id": "VehicleType",
+      "question": "Vehicle Type",
+      "choices": [
+        {"value": "Lights", "label": "Lights"},
+        {"value": "SingleUnitTruck", "label": "Single Unit Truck"},
+        {"value": "ArticulatedTruck", "label": "Articulated Truck"},
+        {"value": "Bus", "label": "Bus"},
+        {"value": "StreetCar", "label": "Street Car"},
+        {"value": "Bicycle", "label": "Bicycle"},
+        {"value": "Pedestrian", "label": "Pedestrian"}
+      ]
+    },
+    {
+      "step_id": "FromDirection",
+      "question": "Coming From?",
+      "choices": [
+        {"value": "north", "label": "North"},
+        {"value": "south", "label": "South"},
+        {"value": "east", "label": "East"},
+        {"value": "west", "label": "West"}
+      ]
+    },
+    {
+      "step_id": "ToDirection",
+      "question": "Going To?",
+      "choices": [
+        {"value": "north", "label": "North"},
+        {"value": "south", "label": "South"},
+        {"value": "east", "label": "East"},
+        {"value": "west", "label": "West"}
+      ]
+    }
+  ]
+}
