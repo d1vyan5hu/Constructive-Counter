@@ -1984,16 +1984,51 @@ function initializeCounting() {
       }
 
       // Play video with error handling
-      if (state.videoElement && state.videoElement.readyState >= 2) {
-        state.videoElement.play().catch(err => {
-          log(`Error playing video on first space press: ${err.message}`);
-          showToast('Error playing video. Please check the video file.', 'error');
-        });
-        state.videoElement.playbackRate = state.playbackSpeed;
-        enableVideoClicks();
+      if (state.videoElement) {
+        // Wait for video to be ready if not already
+        if (state.videoElement.readyState >= 2) {
+          state.videoElement.play().catch(err => {
+            log(`Error playing video on first space press: ${err.message}`);
+            showToast('Error playing video. Please check the video file.', 'error');
+          });
+          state.videoElement.playbackRate = state.playbackSpeed;
+          enableVideoClicks();
+        } else {
+          // Video not ready yet - wait for it to load
+          log('Video not ready when space pressed, waiting for metadata...');
+          const waitForReady = () => {
+            if (state.videoElement && state.videoElement.readyState >= 2) {
+              state.videoElement.play().catch(err => {
+                log(`Error playing video after waiting: ${err.message}`);
+                showToast('Error playing video. Please check the video file.', 'error');
+              });
+              state.videoElement.playbackRate = state.playbackSpeed;
+              enableVideoClicks();
+            } else if (state.videoElement) {
+              // Wait a bit more (max 5 seconds)
+              setTimeout(waitForReady, 100);
+            }
+          };
+          // Also listen for loadedmetadata event as backup
+          const onMetadataLoaded = () => {
+            if (state.videoElement) {
+              state.videoElement.removeEventListener('loadedmetadata', onMetadataLoaded);
+              if (state.spacePressed && state.videoElement.paused) {
+                state.videoElement.play().catch(err => {
+                  log(`Error playing video after metadata loaded: ${err.message}`);
+                  showToast('Error playing video. Please check the video file.', 'error');
+                });
+                state.videoElement.playbackRate = state.playbackSpeed;
+                enableVideoClicks();
+              }
+            }
+          };
+          state.videoElement.addEventListener('loadedmetadata', onMetadataLoaded, { once: true });
+          waitForReady();
+        }
       } else {
-        log('Video not ready when space pressed');
-        showToast('Video is still loading. Please wait...', 'warning');
+        log('Video element not found when space pressed');
+        showToast('Video element not initialized. Please try again.', 'error');
       }
     } else if (e.code === 'Space' && state.spacePressed) {
       e.preventDefault();
