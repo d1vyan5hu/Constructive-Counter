@@ -152,7 +152,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines and contributi
 
 ## License
 
-**Personal Use Only License** - This software is free and open source for personal, non-commercial use only. Commercial use requires a separate license. See [LICENSE](LICENSE) file for full details.
+GNU General Public License v3.0 (GPL-3.0) - see [LICENSE](LICENSE) file for details.
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
 ## Support
 

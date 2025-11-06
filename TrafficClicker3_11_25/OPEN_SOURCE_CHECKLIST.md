@@ -2,7 +2,7 @@
 
 ## ✅ Completed
 
-- [x] **License File**: MIT License added (LICENSE)
+- [x] **License File**: GNU GPLv3 License added (LICENSE)
 - [x] **README**: Comprehensive, up-to-date documentation
 - [x] **Contributing Guidelines**: CONTRIBUTING.md created
 - [x] **Code Documentation**: JSDoc comments added to major functions
