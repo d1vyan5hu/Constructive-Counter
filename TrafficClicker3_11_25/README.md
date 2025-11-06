@@ -152,7 +152,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines and contributi
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+**Personal Use Only License** - This software is free and open source for personal, non-commercial use only. Commercial use requires a separate license. See [LICENSE](LICENSE) file for full details.
 
 ## Support
 
