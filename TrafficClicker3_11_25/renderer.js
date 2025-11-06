@@ -4537,17 +4537,23 @@ async function loadSession() {
           state.configPath = configResult.path;
           elements.configStatus.textContent = `Loaded: ${configResult.path.split(/[/\\]/).pop()}`;
           elements.configStatus.classList.add('loaded');
+          // Update setup fields based on config
+          updateSetupFieldsFromConfig(configResult.config);
         } else if (session.config) {
           // Use config from session file
           state.config = session.config;
           elements.configStatus.textContent = 'Loaded from session';
           elements.configStatus.classList.add('loaded');
+          // Update setup fields based on config
+          updateSetupFieldsFromConfig(session.config);
         }
       } else if (session.config) {
         // Use config from session file
         state.config = session.config;
         elements.configStatus.textContent = 'Loaded from session';
         elements.configStatus.classList.add('loaded');
+        // Update setup fields based on config
+        updateSetupFieldsFromConfig(session.config);
       }
 
       // Load video file
