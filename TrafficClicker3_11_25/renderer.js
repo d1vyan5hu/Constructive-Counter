@@ -2038,6 +2038,7 @@ function initializeCounting() {
           // Also listen for loadedmetadata event as backup
           const onMetadataLoaded = () => {
             if (state.videoElement) {
+              log('Video metadata loaded via event listener');
               state.videoElement.removeEventListener('loadedmetadata', onMetadataLoaded);
               if (state.spacePressed && state.videoElement.paused) {
                 state.videoElement.play().catch(err => {
