@@ -125,23 +125,26 @@ function validateConfig(config) {
     errors.push('Config must have at least one step');
   }
 
-  // Validate setupFields if present
+  // Validate setupFields if present - only check syntax, allow any field IDs
   if (config.setupFields !== undefined) {
     if (!Array.isArray(config.setupFields)) {
       errors.push('setupFields must be an array');
     } else {
-      const validFieldIds = ['street-name', 'guid', 'site-description'];
       config.setupFields.forEach((field, index) => {
         if (typeof field !== 'object' || field === null) {
           errors.push(`setupFields[${index}] must be an object`);
         } else {
+          // Only validate that id exists and is a string (allow any custom field IDs)
           if (!field.id || typeof field.id !== 'string') {
             errors.push(`setupFields[${index}] must have a string "id" property`);
-          } else if (!validFieldIds.includes(field.id)) {
-            errors.push(`setupFields[${index}].id must be one of: ${validFieldIds.join(', ')}`);
           }
-          if (field.label && typeof field.label !== 'string') {
+          // Validate label is a string if provided
+          if (field.label !== undefined && typeof field.label !== 'string') {
             errors.push(`setupFields[${index}].label must be a string`);
+          }
+          // Validate type is valid if provided (text, textarea, number, etc.)
+          if (field.type !== undefined && typeof field.type !== 'string') {
+            errors.push(`setupFields[${index}].type must be a string`);
           }
         }
       });
@@ -491,54 +494,116 @@ function loadVideoFromUrl(videoUrl) {
 
 /**
  * Update setup fields visibility and labels based on config
+ * Dynamically creates fields if they don't exist
  * @param {Object} config - Configuration object with optional setupFields array
  */
 function updateSetupFieldsFromConfig(config) {
-  if (!config || !config.setupFields) {
-    // No setupFields in config - hide all fields
-    const fieldIds = ['street-name', 'guid', 'site-description'];
-    fieldIds.forEach(fieldId => {
+  // Container for dynamic fields (before video start time)
+  const videoStartTimeGroup = document.getElementById('video-start-time')?.closest('.setup-group');
+  const setupContainer = document.querySelector('.setup-container');
+  
+  if (!config || !config.setupFields || config.setupFields.length === 0) {
+    // No setupFields in config - hide all existing predefined fields
+    const predefinedFieldIds = ['street-name', 'guid', 'site-description'];
+    predefinedFieldIds.forEach(fieldId => {
       const fieldGroup = document.getElementById(`setup-field-${fieldId}`);
       if (fieldGroup) {
         fieldGroup.style.display = 'none';
       }
     });
+    // Remove any dynamically created fields
+    document.querySelectorAll('[id^="setup-field-"]').forEach(el => {
+      if (!predefinedFieldIds.some(id => el.id === `setup-field-${id}`)) {
+        el.remove();
+      }
+    });
     return;
   }
 
-  // Map of field IDs to their default labels
+  // Map of predefined field IDs to their default labels
   const defaultLabels = {
     'street-name': 'Street Name',
     'guid': 'GUID',
     'site-description': 'Site Description'
   };
 
-  // Hide all fields first
-  const allFieldIds = ['street-name', 'guid', 'site-description'];
-  allFieldIds.forEach(fieldId => {
+  // Hide all predefined fields first
+  const predefinedFieldIds = ['street-name', 'guid', 'site-description'];
+  predefinedFieldIds.forEach(fieldId => {
     const fieldGroup = document.getElementById(`setup-field-${fieldId}`);
     if (fieldGroup) {
       fieldGroup.style.display = 'none';
     }
   });
 
-  // Show and configure fields specified in config
+  // Remove any previously dynamically created fields
+  document.querySelectorAll('[id^="setup-field-"]').forEach(el => {
+    if (!predefinedFieldIds.some(id => el.id === `setup-field-${id}`)) {
+      el.remove();
+    }
+  });
+
+  // Show and configure fields specified in config (create dynamically if needed)
   config.setupFields.forEach(field => {
     const fieldId = field.id;
-    const fieldGroup = document.getElementById(`setup-field-${fieldId}`);
-    const labelElement = document.getElementById(`setup-label-${fieldId}`);
+    const fieldType = field.type || 'text'; // Default to text input
+    const fieldLabel = field.label || fieldId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const placeholder = field.placeholder || `Enter ${fieldLabel.toLowerCase()}`;
     
-    if (fieldGroup) {
-      // Show the field
-      fieldGroup.style.display = 'block';
+    let fieldGroup = document.getElementById(`setup-field-${fieldId}`);
+    let inputElement = document.getElementById(fieldId);
+    
+    // Create field if it doesn't exist
+    if (!fieldGroup) {
+      fieldGroup = document.createElement('div');
+      fieldGroup.className = 'setup-group';
+      fieldGroup.id = `setup-field-${fieldId}`;
       
-      // Update label if provided
-      if (labelElement && field.label) {
-        labelElement.textContent = field.label;
-      } else if (labelElement && defaultLabels[fieldId]) {
-        // Restore default label if no custom label provided
-        labelElement.textContent = defaultLabels[fieldId];
+      const label = document.createElement('label');
+      label.className = 'setup-label';
+      label.id = `setup-label-${fieldId}`;
+      label.setAttribute('for', fieldId);
+      label.textContent = fieldLabel;
+      
+      // Create input based on type
+      if (fieldType === 'textarea') {
+        inputElement = document.createElement('textarea');
+        inputElement.className = 'setup-textarea';
+        inputElement.rows = field.rows || 3;
+      } else {
+        inputElement = document.createElement('input');
+        inputElement.className = 'setup-input';
+        inputElement.type = fieldType;
       }
+      
+      inputElement.id = fieldId;
+      inputElement.placeholder = placeholder;
+      
+      fieldGroup.appendChild(label);
+      fieldGroup.appendChild(inputElement);
+      
+      // Insert before video start time field
+      if (videoStartTimeGroup && setupContainer) {
+        setupContainer.insertBefore(fieldGroup, videoStartTimeGroup);
+      } else if (setupContainer) {
+        // Fallback: append to container
+        setupContainer.appendChild(fieldGroup);
+      }
+    } else {
+      // Field exists, just update it
+      fieldGroup.style.display = 'block';
+      const labelElement = document.getElementById(`setup-label-${fieldId}`);
+      if (labelElement) {
+        labelElement.textContent = fieldLabel;
+      }
+      if (inputElement) {
+        inputElement.placeholder = placeholder;
+      }
+    }
+    
+    // Show the field
+    if (fieldGroup) {
+      fieldGroup.style.display = 'block';
     }
   });
 }
