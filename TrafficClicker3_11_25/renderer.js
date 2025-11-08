@@ -783,9 +783,21 @@ function initializeSetup() {
   }
 
   elements.startCountingBtn.addEventListener('click', () => {
-    state.setupData.streetName = elements.streetName.value.trim();
-    state.setupData.guid = elements.guid.value.trim();
-    state.setupData.siteDescription = elements.siteDescription.value.trim();
+    // Collect all setup fields dynamically from config
+    if (state.config && state.config.setupFields) {
+      state.config.setupFields.forEach(field => {
+        const fieldElement = document.getElementById(field.id);
+        if (fieldElement) {
+          // Store field value using the field ID as the key
+          state.setupData[field.id] = fieldElement.value.trim();
+        }
+      });
+    }
+    
+    // Legacy support for predefined fields (if they exist in DOM)
+    if (elements.streetName) state.setupData.streetName = elements.streetName.value.trim();
+    if (elements.guid) state.setupData.guid = elements.guid.value.trim();
+    if (elements.siteDescription) state.setupData.siteDescription = elements.siteDescription.value.trim();
 
     // Parse and store video start time
     const startTimeStr = elements.videoStartTime.value.trim();
@@ -963,9 +975,21 @@ function initializeSetup() {
   });
 
   elements.startAuditBtn.addEventListener('click', () => {
-    state.setupData.streetName = elements.streetName.value.trim();
-    state.setupData.guid = elements.guid.value.trim();
-    state.setupData.siteDescription = elements.siteDescription.value.trim();
+    // Collect all setup fields dynamically from config
+    if (state.config && state.config.setupFields) {
+      state.config.setupFields.forEach(field => {
+        const fieldElement = document.getElementById(field.id);
+        if (fieldElement) {
+          // Store field value using the field ID as the key
+          state.setupData[field.id] = fieldElement.value.trim();
+        }
+      });
+    }
+    
+    // Legacy support for predefined fields (if they exist in DOM)
+    if (elements.streetName) state.setupData.streetName = elements.streetName.value.trim();
+    if (elements.guid) state.setupData.guid = elements.guid.value.trim();
+    if (elements.siteDescription) state.setupData.siteDescription = elements.siteDescription.value.trim();
 
     // Parse and store video start time
     const startTimeStr = elements.videoStartTime.value.trim();
