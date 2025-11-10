@@ -275,7 +275,44 @@ ipcMain.handle('select-config-file', async () => {
 });
 
 /**
+ * Copy video file to Desktop/CRClicker/<Video Name> folder
+ * @param {string} sourcePath - Source video file path
+ * @returns {Promise<Object>} Success status and destination path
+ */
+async function copyVideoToFolder(sourcePath) {
+  try {
+    if (!fs.existsSync(sourcePath)) {
+      return { success: false, error: 'Source file does not exist' };
+    }
+    
+    const filename = path.basename(sourcePath);
+    const videoFolder = await getVideoFolder(filename);
+    const destPath = path.join(videoFolder, filename);
+    
+    // Only copy if source and destination are different
+    if (sourcePath !== destPath) {
+      // Check if file already exists in destination
+      if (fs.existsSync(destPath)) {
+        log(`Video file already exists in folder: ${destPath}`);
+        return { success: true, path: destPath, alreadyExists: true };
+      }
+      
+      // Copy file
+      fs.copyFileSync(sourcePath, destPath);
+      log(`Video copied to: ${destPath}`);
+      return { success: true, path: destPath, copied: true };
+    }
+    
+    return { success: true, path: sourcePath, alreadyInFolder: true };
+  } catch (error) {
+    log(`Error copying video: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Open file dialog to select video file
+ * Copies video to Desktop/CRClicker/<Video Name> folder
  * @returns {Promise<Object>} Video file path or error
  */
 ipcMain.handle('select-video-file', async () => {
@@ -288,8 +325,19 @@ ipcMain.handle('select-video-file', async () => {
   });
 
   if (!result.canceled && result.filePaths.length > 0) {
-    log(`Video file selected: ${result.filePaths[0]}`);
-    return { success: true, path: result.filePaths[0] };
+    const selectedPath = result.filePaths[0];
+    log(`Video file selected: ${selectedPath}`);
+    
+    // Copy video to Desktop/CRClicker/<Video Name> folder
+    const copyResult = await copyVideoToFolder(selectedPath);
+    if (copyResult.success) {
+      // Return the path in the video folder (or original if already there)
+      return { success: true, path: copyResult.path, originalPath: selectedPath };
+    } else {
+      // If copy fails, still return the original path
+      log(`Warning: Could not copy video to folder: ${copyResult.error}`);
+      return { success: true, path: selectedPath, copyFailed: true };
+    }
   }
   return { success: false };
 });
