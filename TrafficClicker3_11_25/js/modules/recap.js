@@ -6,7 +6,7 @@
 function createRecapManager(state, elements, log) {
   return {
     /**
-     * Start recap mode - rewind 60 seconds and play until latest entry
+     * Start recap mode - rewind 10 seconds and play until latest entry
      */
     startRecap() {
       const videoPlayer = state.videoElement;
