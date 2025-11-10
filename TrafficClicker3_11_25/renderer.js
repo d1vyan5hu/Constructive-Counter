@@ -1647,11 +1647,10 @@ function drawRedDots() {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const videoRect = video.getBoundingClientRect();
-  if (!videoRect.width || !videoRect.height) return;
+  const displayArea = getVideoDisplayArea();
+  if (!displayArea) return;
   
-  const scaleX = videoRect.width / video.videoWidth;
-  const scaleY = videoRect.height / video.videoHeight;
+  const { displayRect, scaleX, scaleY } = displayArea;
   
   // Validate scale values
   if (!isFinite(scaleX) || !isFinite(scaleY) || scaleX <= 0 || scaleY <= 0) return;
@@ -2005,6 +2004,65 @@ function getCorrectedPlaybackTime(entry) {
 // DIRECTION INDICATORS
 // ============================================================================
 
+/**
+ * Get the actual video display area accounting for aspect ratio and letterboxing
+ * Returns the actual displayed video rectangle and scale factors
+ * @returns {Object} { displayRect: {x, y, width, height}, scaleX, scaleY, videoOffsetX, videoOffsetY }
+ */
+function getVideoDisplayArea() {
+  const video = state.videoElement;
+  if (!video || !video.videoWidth || !video.videoHeight) {
+    return null;
+  }
+
+  const videoRect = video.getBoundingClientRect();
+  const containerRect = state.videoContainer.getBoundingClientRect();
+  
+  if (videoRect.width === 0 || videoRect.height === 0) {
+    return null;
+  }
+
+  const videoOffsetX = videoRect.left - containerRect.left;
+  const videoOffsetY = videoRect.top - containerRect.top;
+
+  // Calculate actual video display area accounting for aspect ratio
+  const videoAspectRatio = video.videoWidth / video.videoHeight;
+  const containerAspectRatio = videoRect.width / videoRect.height;
+
+  let displayWidth, displayHeight, displayX, displayY;
+
+  if (containerAspectRatio > videoAspectRatio) {
+    // Container is wider - letterboxing (black bars on sides)
+    displayHeight = videoRect.height;
+    displayWidth = displayHeight * videoAspectRatio;
+    displayX = videoOffsetX + (videoRect.width - displayWidth) / 2;
+    displayY = videoOffsetY;
+  } else {
+    // Container is taller - pillarboxing (black bars on top/bottom)
+    displayWidth = videoRect.width;
+    displayHeight = displayWidth / videoAspectRatio;
+    displayX = videoOffsetX;
+    displayY = videoOffsetY + (videoRect.height - displayHeight) / 2;
+  }
+
+  // Calculate scale factors for converting between native and display coordinates
+  const scaleX = displayWidth / video.videoWidth;
+  const scaleY = displayHeight / video.videoHeight;
+
+  return {
+    displayRect: {
+      x: displayX,
+      y: displayY,
+      width: displayWidth,
+      height: displayHeight
+    },
+    scaleX,
+    scaleY,
+    videoOffsetX,
+    videoOffsetY
+  };
+}
+
 function initializeDirectionIndicators() {
   const indicators = {
     north: elements.dirN,
@@ -2013,44 +2071,57 @@ function initializeDirectionIndicators() {
     west: elements.dirW
   };
 
-  const video = state.videoElement;
-  const videoRect = video.getBoundingClientRect();
-  const containerRect = state.videoContainer.getBoundingClientRect();
-  const videoOffsetX = videoRect.left - containerRect.left;
-  const videoOffsetY = videoRect.top - containerRect.top;
+  const displayArea = getVideoDisplayArea();
+  if (!displayArea) {
+    // Video not ready yet, retry
+    setTimeout(initializeDirectionIndicators, 100);
+    return;
+  }
 
-  // Default positions
+  const { displayRect } = displayArea;
+  const video = state.videoElement;
+
+  // Default positions as percentages of video native dimensions
+  // Center horizontally, near edges vertically
   const defaults = {
-    north: { x: videoOffsetX + videoRect.width / 2, y: videoOffsetY + 20 },
-    south: { x: videoOffsetX + videoRect.width / 2, y: videoOffsetY + videoRect.height - 50 },
-    east: { x: videoOffsetX + videoRect.width - 50, y: videoOffsetY + videoRect.height / 2 },
-    west: { x: videoOffsetX + 20, y: videoOffsetY + videoRect.height / 2 }
+    north: { xPercent: 0.5, yPercent: 0.05 },  // 50% from left, 5% from top
+    south: { xPercent: 0.5, yPercent: 0.95 },  // 50% from left, 95% from top
+    east: { xPercent: 0.95, yPercent: 0.5 },   // 95% from left, 50% from top
+    west: { xPercent: 0.05, yPercent: 0.5 }    // 5% from left, 50% from top
   };
 
-  // Load saved positions
+  // Load saved positions (may be old pixel-based or new percentage-based)
   const savedPositions = loadDirectionIndicators();
 
   Object.keys(indicators).forEach(direction => {
     const indicator = indicators[direction];
-    let pos = savedPositions[direction] || defaults[direction];
+    let posPercent = savedPositions[direction] || defaults[direction];
 
-    // Scale position if video dimensions changed
-    if (savedPositions.videoWidth && savedPositions.videoHeight) {
-      const scaleX = videoRect.width / savedPositions.videoWidth;
-      const scaleY = videoRect.height / savedPositions.videoHeight;
-      pos = {
-        x: videoOffsetX + (pos.x - videoOffsetX) * scaleX,
-        y: videoOffsetY + (pos.y - videoOffsetY) * scaleY
+    // If saved position is in old pixel format, convert to percentage
+    if (posPercent.x !== undefined && posPercent.y !== undefined && 
+        savedPositions.videoWidth && savedPositions.videoHeight) {
+      // Old format: convert pixels to percentage
+      const savedX = posPercent.x - (savedPositions.videoOffsetX || 0);
+      const savedY = posPercent.y - (savedPositions.videoOffsetY || 0);
+      posPercent = {
+        xPercent: savedX / savedPositions.videoWidth,
+        yPercent: savedY / savedPositions.videoHeight
       };
     }
 
-    // Constrain to video bounds
-    const indicatorRect = indicator.getBoundingClientRect();
-    pos.x = Math.max(videoOffsetX, Math.min(pos.x, videoOffsetX + videoRect.width - indicatorRect.width));
-    pos.y = Math.max(videoOffsetY, Math.min(pos.y, videoOffsetY + videoRect.height - indicatorRect.height));
+    // Convert percentage to pixels using actual video display area
+    const posX = displayRect.x + (posPercent.xPercent * displayRect.width);
+    const posY = displayRect.y + (posPercent.yPercent * displayRect.height);
 
-    indicator.style.left = pos.x + 'px';
-    indicator.style.top = pos.y + 'px';
+    // Constrain to video display bounds
+    const indicatorRect = indicator.getBoundingClientRect();
+    const constrainedX = Math.max(displayRect.x, 
+      Math.min(posX, displayRect.x + displayRect.width - indicatorRect.width));
+    const constrainedY = Math.max(displayRect.y, 
+      Math.min(posY, displayRect.y + displayRect.height - indicatorRect.height));
+
+    indicator.style.left = constrainedX + 'px';
+    indicator.style.top = constrainedY + 'px';
 
     // Make draggable
     makeIndicatorDraggable(indicator, direction);
@@ -2077,7 +2148,6 @@ function makeIndicatorDraggable(indicator, direction) {
   indicator.addEventListener('mousedown', (e) => {
     isDragging = true;
     const rect = indicator.getBoundingClientRect();
-    const containerRect = state.videoContainer.getBoundingClientRect();
     dragOffset.x = e.clientX - rect.left;
     dragOffset.y = e.clientY - rect.top;
     indicator.classList.add('dragging');
@@ -2087,19 +2157,21 @@ function makeIndicatorDraggable(indicator, direction) {
   document.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
 
-    const video = state.videoElement;
-    const videoRect = video.getBoundingClientRect();
-    const containerRect = state.videoContainer.getBoundingClientRect();
-    const videoOffsetX = videoRect.left - containerRect.left;
-    const videoOffsetY = videoRect.top - containerRect.top;
+    const displayArea = getVideoDisplayArea();
+    if (!displayArea) return;
+
+    const { displayRect } = displayArea;
     const indicatorRect = indicator.getBoundingClientRect();
+    const containerRect = state.videoContainer.getBoundingClientRect();
 
     let newX = e.clientX - containerRect.left - dragOffset.x;
     let newY = e.clientY - containerRect.top - dragOffset.y;
 
-    // Constrain to video bounds
-    newX = Math.max(videoOffsetX, Math.min(newX, videoOffsetX + videoRect.width - indicatorRect.width));
-    newY = Math.max(videoOffsetY, Math.min(newY, videoOffsetY + videoRect.height - indicatorRect.height));
+    // Constrain to actual video display area (not container)
+    newX = Math.max(displayRect.x, 
+      Math.min(newX, displayRect.x + displayRect.width - indicatorRect.width));
+    newY = Math.max(displayRect.y, 
+      Math.min(newY, displayRect.y + displayRect.height - indicatorRect.height));
 
     indicator.style.left = newX + 'px';
     indicator.style.top = newY + 'px';
@@ -2115,21 +2187,23 @@ function makeIndicatorDraggable(indicator, direction) {
 }
 
 function updateDirectionIndicators() {
+  const displayArea = getVideoDisplayArea();
+  if (!displayArea) return;
+
+  const { displayRect } = displayArea;
   const indicators = [elements.dirN, elements.dirS, elements.dirE, elements.dirW];
-  const video = state.videoElement;
-  const videoRect = video.getBoundingClientRect();
   const containerRect = state.videoContainer.getBoundingClientRect();
-  const videoOffsetX = videoRect.left - containerRect.left;
-  const videoOffsetY = videoRect.top - containerRect.top;
 
   indicators.forEach(indicator => {
     const rect = indicator.getBoundingClientRect();
     let x = rect.left - containerRect.left;
     let y = rect.top - containerRect.top;
 
-    // Constrain to bounds
-    x = Math.max(videoOffsetX, Math.min(x, videoOffsetX + videoRect.width - rect.width));
-    y = Math.max(videoOffsetY, Math.min(y, videoOffsetY + videoRect.height - rect.height));
+    // Constrain to actual video display area (not container)
+    x = Math.max(displayRect.x, 
+      Math.min(x, displayRect.x + displayRect.width - rect.width));
+    y = Math.max(displayRect.y, 
+      Math.min(y, displayRect.y + displayRect.height - rect.height));
 
     indicator.style.left = x + 'px';
     indicator.style.top = y + 'px';
@@ -2137,31 +2211,38 @@ function updateDirectionIndicators() {
 }
 
 function saveDirectionIndicators() {
+  const displayArea = getVideoDisplayArea();
+  if (!displayArea) return;
+
+  const { displayRect } = displayArea;
   const video = state.videoElement;
-  const videoRect = video.getBoundingClientRect();
+
+  // Convert current pixel positions to percentages of video native dimensions
   const containerRect = state.videoContainer.getBoundingClientRect();
-  const videoOffsetX = videoRect.left - containerRect.left;
-  const videoOffsetY = videoRect.top - containerRect.top;
+  
+  const getPercentPosition = (indicator) => {
+    const left = parseFloat(indicator.style.left) || 0;
+    const top = parseFloat(indicator.style.top) || 0;
+    
+    // Convert from container-relative pixels to video display area-relative
+    const xInDisplay = left - displayRect.x;
+    const yInDisplay = top - displayRect.y;
+    
+    // Convert to percentage of video native dimensions
+    return {
+      xPercent: xInDisplay / displayRect.width,
+      yPercent: yInDisplay / displayRect.height
+    };
+  };
 
   const positions = {
-    videoWidth: videoRect.width,
-    videoHeight: videoRect.height,
-    north: {
-      x: parseFloat(elements.dirN.style.left),
-      y: parseFloat(elements.dirN.style.top)
-    },
-    south: {
-      x: parseFloat(elements.dirS.style.left),
-      y: parseFloat(elements.dirS.style.top)
-    },
-    east: {
-      x: parseFloat(elements.dirE.style.left),
-      y: parseFloat(elements.dirE.style.top)
-    },
-    west: {
-      x: parseFloat(elements.dirW.style.left),
-      y: parseFloat(elements.dirW.style.top)
-    }
+    version: 2, // Mark as new percentage-based format
+    videoNativeWidth: video.videoWidth,
+    videoNativeHeight: video.videoHeight,
+    north: getPercentPosition(elements.dirN),
+    south: getPercentPosition(elements.dirS),
+    east: getPercentPosition(elements.dirE),
+    west: getPercentPosition(elements.dirW)
   };
 
   localStorage.setItem('directionIndicators', JSON.stringify(positions));
@@ -2574,23 +2655,24 @@ function handleVideoClick(e) {
   state.videoElement.pause();
 
   // Get click coordinates in native video dimensions
-  const videoRect = state.videoElement.getBoundingClientRect();
-  const containerRect = state.videoContainer.getBoundingClientRect();
-  const videoOffsetX = videoRect.left - containerRect.left;
-  const videoOffsetY = videoRect.top - containerRect.top;
-
-  const clickX = e.clientX - containerRect.left - videoOffsetX;
-  const clickY = e.clientY - containerRect.top - videoOffsetY;
-
-  // Validate video dimensions
-  if (!state.videoElement.videoWidth || !state.videoElement.videoHeight || 
-      !videoRect.width || !videoRect.height) {
-    log('Error: Video dimensions not available');
+  const displayArea = getVideoDisplayArea();
+  if (!displayArea) {
+    log('Error: Video display area not available');
     return;
   }
 
-  const scaleX = state.videoElement.videoWidth / videoRect.width;
-  const scaleY = state.videoElement.videoHeight / videoRect.height;
+  const { displayRect, scaleX, scaleY } = displayArea;
+  const containerRect = state.videoContainer.getBoundingClientRect();
+
+  // Convert click coordinates relative to container to coordinates relative to video display area
+  const clickX = e.clientX - containerRect.left - displayRect.x;
+  const clickY = e.clientY - containerRect.top - displayRect.y;
+
+  // Validate click is within video display area
+  if (clickX < 0 || clickX > displayRect.width || clickY < 0 || clickY > displayRect.height) {
+    // Click outside video display area (e.g., in letterbox area), ignore
+    return;
+  }
 
   // Validate scale values
   if (!isFinite(scaleX) || !isFinite(scaleY) || scaleX <= 0 || scaleY <= 0) {
@@ -2598,8 +2680,9 @@ function handleVideoClick(e) {
     return;
   }
 
-  const nativeX = clickX * scaleX;
-  const nativeY = clickY * scaleY;
+  // Convert display coordinates to native video coordinates
+  const nativeX = clickX / scaleX;
+  const nativeY = clickY / scaleY;
 
   // Validate coordinates
   if (!isFinite(nativeX) || !isFinite(nativeY)) {
