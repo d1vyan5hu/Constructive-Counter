@@ -15,23 +15,23 @@ function createRecapManager(state, elements, log) {
         return;
       }
       
-      // If no entries exist, just rewind 60 seconds and pause
+      // If no entries exist, just rewind 10 seconds and pause
       if (state.masterLog.length === 0) {
         const currentTime = videoPlayer.currentTime;
-        const rewindSeconds = 60;
+        const rewindSeconds = 10;
         const newPlaybackTime = Math.max(0, currentTime - rewindSeconds);
         videoPlayer.currentTime = newPlaybackTime;
         
         videoPlayer.addEventListener('seeked', function onSeeked() {
           videoPlayer.removeEventListener('seeked', onSeeked);
           videoPlayer.pause();
-          log(`Rewound 60 seconds (no entries to recap)`);
+          log(`Rewound 10 seconds (no entries to recap)`);
         }, { once: true });
         return;
       }
       
       const currentTime = videoPlayer.currentTime;
-      const rewindSeconds = 60;
+      const rewindSeconds = 10;
       
       // Find the latest entry time (the entry with the biggest playback_time_seconds)
       // Ensure we convert to numbers for proper comparison
@@ -59,7 +59,7 @@ function createRecapManager(state, elements, log) {
         .sort((a, b) => parseFloat(a) - parseFloat(b));
       log(`Recap: Found ${allEntryTimes.length} entries at times: ${allEntryTimes.join(', ')}s. Latest: ${latestEntry.toFixed(2)}s`);
       
-      // Calculate new playback time (rewind 60 seconds from current position)
+      // Calculate new playback time (rewind 10 seconds from current position)
       const newPlaybackTime = Math.max(0, currentTime - rewindSeconds);
       videoPlayer.currentTime = newPlaybackTime;
       

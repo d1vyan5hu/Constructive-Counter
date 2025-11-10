@@ -2546,10 +2546,10 @@ function initializeCounting() {
       }
     }
 
-    // Minus key (-) for 60-second rewind and recap (works during recap too)
+    // Minus key (-) for 10-second rewind and recap (works during recap too)
     if (e.code === 'Minus' && state.spacePressed) {
       e.preventDefault();
-      // If in recap mode, rewind another 60 seconds from current position
+      // If in recap mode, rewind another 10 seconds from current position
       // Recap will always go until latest entry time regardless of how many times "-" is pressed
       startRecap();
     }
@@ -3503,7 +3503,7 @@ function showShortcutsModal() {
     { key: '→', desc: 'Increase speed' },
     { key: '↑', desc: 'Reset speed to 1.0x' },
     { key: '↓', desc: 'Pause & reset speed' },
-    { key: '-', desc: 'Rewind 60s & recap' },
+    { key: '-', desc: 'Rewind 10s & recap' },
     { key: 'Ctrl+Z', desc: 'Undo last entry' },
     { key: 'Ctrl+Shift+Z', desc: 'Redo entry' },
     { key: 'Ctrl+E', desc: 'Export data' },
@@ -3607,23 +3607,23 @@ function startRecap() {
     return;
   }
 
-  // If no entries exist, just rewind 60 seconds and pause
+  // If no entries exist, just rewind 10 seconds and pause
   if (state.masterLog.length === 0) {
     const currentTime = videoPlayer.currentTime;
-    const rewindSeconds = 60;
+    const rewindSeconds = 10;
     const newPlaybackTime = Math.max(0, currentTime - rewindSeconds);
     videoPlayer.currentTime = newPlaybackTime;
 
     videoPlayer.addEventListener('seeked', function onSeeked() {
       videoPlayer.removeEventListener('seeked', onSeeked);
       videoPlayer.pause();
-      log(`Rewound 60 seconds (no entries to recap)`);
+      log(`Rewound 10 seconds (no entries to recap)`);
     }, { once: true });
     return;
   }
 
   const currentTime = videoPlayer.currentTime;
-  const rewindSeconds = 60;
+  const rewindSeconds = 10;
 
   // Find the latest entry time (the entry with the biggest playback_time_seconds)
   // Ensure we convert to numbers for proper comparison
@@ -3651,7 +3651,7 @@ function startRecap() {
     .sort((a, b) => parseFloat(a) - parseFloat(b));
   log(`Recap: Found ${allEntryTimes.length} entries at times: ${allEntryTimes.join(', ')}s. Latest: ${latestEntry.toFixed(2)}s`);
 
-  // Calculate new playback time (rewind 60 seconds from current position)
+  // Calculate new playback time (rewind 10 seconds from current position)
   const newPlaybackTime = Math.max(0, currentTime - rewindSeconds);
   videoPlayer.currentTime = newPlaybackTime;
 
