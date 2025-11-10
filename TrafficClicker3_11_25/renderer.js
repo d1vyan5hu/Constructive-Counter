@@ -259,6 +259,7 @@ let state = stateModule?.state || {
   originalEntries: [], // Original entries from CSV in audit mode
   deletedEntryIds: new Set(), // Entry IDs marked for deletion in audit mode
   newEntries: [], // New entries added during audit
+  videoLoadTime: null, // Timestamp when video was loaded (for processing time calculation)
   // Undo/Redo stack
   undoStack: [], // History of state snapshots for undo
   redoStack: [], // History of state snapshots for redo
@@ -826,6 +827,8 @@ function initializeSetup() {
       state.playbackSpeed = state.pendingSessionData.playbackSpeed || 1.0;
       state.entryCounter = state.pendingSessionData.entryCounter || 0;
       state.savedVideoPosition = state.pendingSessionData.videoPosition || 0;
+      // Restore video load time if available, otherwise reset it
+      state.videoLoadTime = state.pendingSessionData.videoLoadTime || null;
       state.pendingSessionData = null; // Clear after use
     } else {
       // Clear previous session data (new session)
@@ -835,6 +838,7 @@ function initializeSetup() {
       state.originalEntries = [];
       state.entryCounter = 0;
       state.savedVideoPosition = 0;
+      state.videoLoadTime = null; // Reset video load time for new session
     }
     
     state.currentEntry = null;
@@ -1015,6 +1019,8 @@ function initializeSetup() {
       state.playbackSpeed = state.pendingSessionData.playbackSpeed || 1.0;
       state.entryCounter = state.pendingSessionData.entryCounter || 0;
       state.savedVideoPosition = state.pendingSessionData.videoPosition || 0;
+      // Restore video load time if available, otherwise reset it
+      state.videoLoadTime = state.pendingSessionData.videoLoadTime || null;
       state.pendingSessionData = null; // Clear after use
     } else {
       // Clear previous session data (except original entries from CSV)
@@ -1022,6 +1028,7 @@ function initializeSetup() {
       state.deletedEntryIds.clear();
       state.entryCounter = 0;
       state.savedVideoPosition = 0;
+      state.videoLoadTime = null; // Reset video load time for new session
       // Load original entries into masterLog for audit
       state.masterLog = [...state.originalEntries];
     }
@@ -1326,6 +1333,12 @@ function initializeVideo() {
   }
   
   state.eventListeners.loadedmetadata = () => {
+    // Track video load time (for processing time calculation)
+    if (!state.videoLoadTime) {
+      state.videoLoadTime = Date.now();
+      log(`Video loaded at ${new Date(state.videoLoadTime).toISOString()}`);
+    }
+    
     // Wait for next frame to ensure layout is complete
     requestAnimationFrame(() => {
       if (!state.videoElement) return;
@@ -3181,10 +3194,39 @@ function calculateTimestamp(entry) {
 // ============================================================================
 // STATISTICS DASHBOARD
 // ============================================================================
+
+/**
+ * Format processing time in human-readable format
+ * @param {number} milliseconds - Time in milliseconds
+ * @returns {string} Formatted time string (e.g., "2h 15m 30s" or "45.5 min")
+ */
+function formatProcessingTime(milliseconds) {
+  if (!milliseconds || milliseconds <= 0) return 'N/A';
+  
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`;
+  } else if (minutes > 0) {
+    const secs = seconds > 0 ? ` ${seconds}s` : '';
+    return `${minutes}m${secs}`;
+  } else {
+    return `${seconds}s`;
+  }
+}
+
 function showStatisticsDashboard(entries) {
   const modal = document.getElementById('stats-modal');
   const content = document.getElementById('stats-content');
   if (!modal || !content) return;
+
+  // Calculate processing time (time from video load to export)
+  const exportTime = Date.now();
+  const processingTimeMs = state.videoLoadTime ? (exportTime - state.videoLoadTime) : null;
+  const processingTimeFormatted = processingTimeMs ? formatProcessingTime(processingTimeMs) : 'N/A';
 
   // Calculate statistics
   const totalEntries = entries.length;
@@ -3230,7 +3272,31 @@ function showStatisticsDashboard(entries) {
   html += `<div class="stat-card"><h3>Total Entries</h3><div class="value">${totalEntries}</div></div>`;
   html += `<div class="stat-card"><h3>Entry Rate</h3><div class="value">${entryRate}/min</div></div>`;
   html += `<div class="stat-card"><h3>Duration</h3><div class="value">${duration.toFixed(1)} min</div></div>`;
+  html += `<div class="stat-card"><h3>Processing Time</h3><div class="value">${processingTimeFormatted}</div></div>`;
   html += '</div>';
+
+  // Audit mode specific statistics
+  if (state.mode === 'audit') {
+    const missingEntries = state.newEntries.length;
+    const corrections = state.deletedEntryIds.size;
+    const totalOriginalEntries = state.originalEntries.length;
+    
+    // Calculate accuracy before audit
+    let accuracyBeforeAudit = 'N/A';
+    if (totalOriginalEntries > 0) {
+      const errorCount = missingEntries + corrections;
+      const accuracy = 100 - ((errorCount / totalOriginalEntries) * 100);
+      accuracyBeforeAudit = accuracy.toFixed(2) + '%';
+    }
+    
+    html += '<h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Audit Statistics</h3>';
+    html += '<div class="stats-grid">';
+    html += `<div class="stat-card"><h3>Total Original Entries</h3><div class="value">${totalOriginalEntries}</div></div>`;
+    html += `<div class="stat-card"><h3>Missing Entries</h3><div class="value">${missingEntries}</div></div>`;
+    html += `<div class="stat-card"><h3>Corrections</h3><div class="value">${corrections}</div></div>`;
+    html += `<div class="stat-card"><h3>Accuracy Before Audit</h3><div class="value">${accuracyBeforeAudit}</div></div>`;
+    html += '</div>';
+  }
 
   // Time distribution
   html += '<h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem;">Time Distribution</h3>';
@@ -4722,7 +4788,8 @@ async function saveSession() {
     auditCsvPath: state.mode === 'audit' ? state.auditCsvPath : null,
     videoPosition: state.videoElement ? state.videoElement.currentTime : 0,
     playbackSpeed: state.playbackSpeed,
-    entryCounter: state.entryCounter
+    entryCounter: state.entryCounter,
+    videoLoadTime: state.videoLoadTime // Save video load time for processing time calculation
   };
 
   try {
@@ -4846,7 +4913,8 @@ async function loadSession() {
         originalEntries: session.originalEntries || [],
         videoPosition: session.videoPosition || 0,
         playbackSpeed: session.playbackSpeed || 1.0,
-        entryCounter: session.entryCounter || 0
+        entryCounter: session.entryCounter || 0,
+        videoLoadTime: session.videoLoadTime || null // Restore video load time for processing time calculation
       };
 
       showToast('Session loaded. Click "Start Counting" to continue.', 'success', 3000);
