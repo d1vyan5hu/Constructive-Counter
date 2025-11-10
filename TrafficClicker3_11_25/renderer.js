@@ -254,6 +254,7 @@ let state = stateModule?.state || {
   rewindStartTime: null, // Track when rewind started (to pause when we reach it)
   recapEndTime: null, // Track when recap should end (latest entry time)
   recapCompleted: false, // Track if recap has completed (paused at latest entry, waiting for SPACE to exit)
+  pausedAtGreenDots: new Set(), // Track entry IDs that have already triggered pause at green dot
   mode: 'entry', // 'entry' or 'audit'
   auditCsvPath: null, // Path to loaded CSV in audit mode
   originalEntries: [], // Original entries from CSV in audit mode
@@ -847,6 +848,7 @@ function initializeSetup() {
       state.entryCounter = 0;
       state.savedVideoPosition = 0;
       state.videoLoadTime = null; // Reset video load time for new session
+      state.pausedAtGreenDots.clear(); // Clear green dot pause tracking
     }
     
     state.currentEntry = null;
@@ -1031,14 +1033,15 @@ function initializeSetup() {
       state.videoLoadTime = state.pendingSessionData.videoLoadTime || null;
       state.pendingSessionData = null; // Clear after use
     } else {
-      // Clear previous session data (except original entries from CSV)
-      state.newEntries = [];
-      state.deletedEntryIds.clear();
-      state.entryCounter = 0;
-      state.savedVideoPosition = 0;
-      state.videoLoadTime = null; // Reset video load time for new session
-      // Load original entries into masterLog for audit
-      state.masterLog = [...state.originalEntries];
+    // Clear previous session data (except original entries from CSV)
+    state.newEntries = [];
+    state.deletedEntryIds.clear();
+    state.entryCounter = 0;
+    state.savedVideoPosition = 0;
+    state.videoLoadTime = null; // Reset video load time for new session
+    state.pausedAtGreenDots.clear(); // Clear green dot pause tracking
+    // Load original entries into masterLog for audit
+    state.masterLog = [...state.originalEntries];
     }
 
     state.currentEntry = null;
@@ -3594,6 +3597,9 @@ function formatTime(seconds) {
 }
 
 function startRecap() {
+  // Clear paused green dots tracking when starting a new recap
+  state.pausedAtGreenDots.clear();
+  
   // Use recap manager if available
   if (recapManager) {
     recapManager.startRecap();
