@@ -697,13 +697,21 @@ function initializeSetup() {
       // Check if this is a different video from auto-save before setting new path
       const oldVideoPath = state.videoPath;
       
+      // Use the copied path if available (from Desktop/CRClicker/<Video Name>)
       state.videoPath = result.path;
       // Extract filename without extension for screenshot naming
       const fullPath = result.path;
       const filename = fullPath.split('/').pop().split('\\').pop();
       state.videoFileName = filename.replace(/\.[^/.]+$/, ''); // Remove extension
-      elements.videoStatus.textContent = `Loaded: ${result.path.split('/').pop()}`;
+      elements.videoStatus.textContent = `Loaded: ${filename}`;
       elements.videoStatus.classList.add('loaded');
+      
+      // Log if video was copied to Desktop/CRClicker folder
+      if (result.copied) {
+        log(`Video copied to Desktop/CRClicker folder: ${result.path}`);
+      } else if (result.alreadyExists) {
+        log(`Video already exists in Desktop/CRClicker folder: ${result.path}`);
+      }
       
       // Reset streaming state
       state.videoUrl = null;
