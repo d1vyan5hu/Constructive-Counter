@@ -394,6 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   initializeSetup();
   initializeCounting();
+  setupScrollTracking(); // Set up scroll tracking for entries log
   loadDirectionIndicators();
   
   
@@ -3882,6 +3883,80 @@ function updateLogsPanel() {
 // Track which entry is currently highlighted to avoid duplicate calls
 let currentHighlightedEntryId = null;
 let highlightTimeout = null;
+let isUserScrolling = false;
+let userScrollTimeout = null;
+
+// Track user manual scrolling to disable auto-scroll
+let lastScrollTop = 0;
+let scrollTrackingInitialized = false;
+
+function setupScrollTracking() {
+  if (!elements.logsContent || scrollTrackingInitialized) return;
+  scrollTrackingInitialized = true;
+  
+  // Track initial scroll position
+  lastScrollTop = elements.logsContent.scrollTop;
+  
+  // Detect when user uses mouse wheel to scroll
+  elements.logsContent.addEventListener('wheel', (e) => {
+    // User is actively scrolling with wheel
+    isUserScrolling = true;
+    
+    // Clear any existing timeout
+    if (userScrollTimeout) {
+      clearTimeout(userScrollTimeout);
+    }
+    
+    // Reset flag after user stops scrolling for 1.5 seconds
+    userScrollTimeout = setTimeout(() => {
+      isUserScrolling = false;
+    }, 1500);
+  }, { passive: true });
+  
+  // Detect scrollbar dragging or touch scrolling
+  elements.logsContent.addEventListener('scroll', () => {
+    const currentScrollTop = elements.logsContent.scrollTop;
+    const scrollDelta = Math.abs(currentScrollTop - lastScrollTop);
+    
+    // Only mark as user scrolling if scroll change is significant (more than 5px)
+    // This helps distinguish user scroll from programmatic scrollIntoView
+    // scrollIntoView typically causes smooth scrolling, but we want to catch manual drags
+    if (scrollDelta > 5) {
+      isUserScrolling = true;
+      
+      if (userScrollTimeout) {
+        clearTimeout(userScrollTimeout);
+      }
+      
+      // Reset flag after user stops scrolling for 1.5 seconds
+      userScrollTimeout = setTimeout(() => {
+        isUserScrolling = false;
+      }, 1500);
+    }
+    
+    lastScrollTop = currentScrollTop;
+  }, { passive: true });
+  
+  // Also detect mouse down on scrollbar (user is about to drag)
+  elements.logsContent.addEventListener('mousedown', (e) => {
+    // Check if click is on or near the scrollbar area
+    const rect = elements.logsContent.getBoundingClientRect();
+    const scrollbarWidth = elements.logsContent.offsetWidth - elements.logsContent.clientWidth;
+    
+    // If click is in the right edge area (where scrollbar typically is)
+    if (e.clientX > rect.right - scrollbarWidth - 10) {
+      isUserScrolling = true;
+      
+      if (userScrollTimeout) {
+        clearTimeout(userScrollTimeout);
+      }
+      
+      userScrollTimeout = setTimeout(() => {
+        isUserScrolling = false;
+      }, 1500);
+    }
+  }, { passive: true });
+}
 
 // Highlight entry in log during recap/audit mode when dot appears
 function highlightEntryInLog(entryId, isActive = false) {
@@ -3912,11 +3987,13 @@ function highlightEntryInLog(entryId, isActive = false) {
       highlightTimeout = null;
     }
     
-    // Scroll to show the entry
-    entryElement.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center'
-    });
+    // Only auto-scroll if user is not manually scrolling
+    if (!isUserScrolling) {
+      entryElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
   } else {
     // Streaming mode (orange dot) - only add if not already active
     if (!entryElement.classList.contains('active')) {
