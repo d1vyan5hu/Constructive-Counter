@@ -15,8 +15,7 @@ const os = require('os');
 
 let mainWindow;
 let appLogsPath;
-let moviesTrafficClickerPath;
-let documentsTrafficClickerPath;
+let desktopCRClickerPath; // Desktop/CRClicker base folder
 let activeDownloads = new Map(); // Track active downloads by URL to prevent duplicates
 
 /**
@@ -39,68 +38,37 @@ function initializePaths() {
 }
 
 /**
- * Ensure CRClicker folders exist in Movies and Documents
- * Requests permissions if folder creation fails
- * @returns {Promise<Object>} Object with paths and existence status
+ * Ensure CRClicker folder exists on Desktop
+ * Creates Desktop/CRClicker if it doesn't exist
+ * @returns {Promise<Object>} Object with path and existence status
  */
-async function ensureTrafficClickerFolders() {
+async function ensureCRClickerFolder() {
   try {
-    // Get paths - use home directory as fallback if specific paths fail
-    let moviesPath;
-    let documentsPath;
-    
+    // Get Desktop path
+    let desktopPath;
     try {
-      moviesPath = app.getPath('movies');
+      desktopPath = app.getPath('desktop');
     } catch (error) {
-      log(`Could not get movies path, using home directory: ${error.message}`);
-      moviesPath = path.join(app.getPath('home'), 'Movies');
+      log(`Could not get desktop path, using home directory: ${error.message}`);
+      desktopPath = path.join(app.getPath('home'), 'Desktop');
     }
     
-    try {
-      documentsPath = app.getPath('documents');
-    } catch (error) {
-      log(`Could not get documents path, using home directory: ${error.message}`);
-      documentsPath = path.join(app.getPath('home'), 'Documents');
-    }
+    desktopCRClickerPath = path.join(desktopPath, 'CRClicker');
     
-    moviesTrafficClickerPath = path.join(moviesPath, 'CRClicker');
-    documentsTrafficClickerPath = path.join(documentsPath, 'CRClicker');
-    
-    // Try to create Movies/CRClicker
+    // Create Desktop/CRClicker if it doesn't exist
     try {
-      if (!fs.existsSync(moviesTrafficClickerPath)) {
-        fs.mkdirSync(moviesTrafficClickerPath, { recursive: true });
-        log(`Created folder: ${moviesTrafficClickerPath}`);
+      if (!fs.existsSync(desktopCRClickerPath)) {
+        fs.mkdirSync(desktopCRClickerPath, { recursive: true });
+        log(`Created folder: ${desktopCRClickerPath}`);
       }
     } catch (error) {
-      log(`Failed to create Movies/CRClicker: ${error.message}`);
+      log(`Failed to create Desktop/CRClicker: ${error.message}`);
       // Request permissions
       const result = await dialog.showMessageBox(mainWindow, {
         type: 'warning',
         title: 'Permission Required',
-        message: 'CRClicker needs access to your Movies folder',
-        detail: 'Please grant access to create the CRClicker folder in Movies.',
-        buttons: ['Open System Preferences', 'Cancel']
-      });
-      if (result.response === 0) {
-        shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles');
-      }
-    }
-    
-    // Try to create Documents/CRClicker
-    try {
-      if (!fs.existsSync(documentsTrafficClickerPath)) {
-        fs.mkdirSync(documentsTrafficClickerPath, { recursive: true });
-        log(`Created folder: ${documentsTrafficClickerPath}`);
-      }
-    } catch (error) {
-      log(`Failed to create Documents/CRClicker: ${error.message}`);
-      // Request permissions
-      const result = await dialog.showMessageBox(mainWindow, {
-        type: 'warning',
-        title: 'Permission Required',
-        message: 'CRClicker needs access to your Documents folder',
-        detail: 'Please grant access to create the CRClicker folder in Documents.',
+        message: 'CRClicker needs access to your Desktop',
+        detail: 'Please grant access to create the CRClicker folder on Desktop.',
         buttons: ['Open System Preferences', 'Cancel']
       });
       if (result.response === 0) {
@@ -109,21 +77,43 @@ async function ensureTrafficClickerFolders() {
     }
     
     return {
-      moviesPath: moviesTrafficClickerPath,
-      documentsPath: documentsTrafficClickerPath,
-      moviesExists: fs.existsSync(moviesTrafficClickerPath),
-      documentsExists: fs.existsSync(documentsTrafficClickerPath)
+      basePath: desktopCRClickerPath,
+      exists: fs.existsSync(desktopCRClickerPath)
     };
   } catch (error) {
-    log(`Error ensuring CRClicker folders: ${error.message}`);
+    log(`Error ensuring CRClicker folder: ${error.message}`);
     return {
-      moviesPath: moviesTrafficClickerPath,
-      documentsPath: documentsTrafficClickerPath,
-      moviesExists: false,
-      documentsExists: false,
+      basePath: desktopCRClickerPath,
+      exists: false,
       error: error.message
     };
   }
+}
+
+/**
+ * Get or create video-specific folder inside Desktop/CRClicker
+ * @param {string} videoName - Video filename (with or without extension)
+ * @returns {Promise<string>} Path to video-specific folder
+ */
+async function getVideoFolder(videoName) {
+  await ensureCRClickerFolder();
+  
+  if (!videoName) {
+    return desktopCRClickerPath;
+  }
+  
+  // Remove extension and sanitize video name for folder name
+  const videoNameWithoutExt = videoName.replace(/\.[^/.]+$/, '');
+  const safeVideoName = videoNameWithoutExt.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const videoFolderPath = path.join(desktopCRClickerPath, safeVideoName);
+  
+  // Create video folder if it doesn't exist
+  if (!fs.existsSync(videoFolderPath)) {
+    fs.mkdirSync(videoFolderPath, { recursive: true });
+    log(`Created video folder: ${videoFolderPath}`);
+  }
+  
+  return videoFolderPath;
 }
 
 /**
@@ -202,8 +192,8 @@ app.whenReady().then(async () => {
   
   createWindow();
   
-  // Ensure CRClicker folders exist
-  await ensureTrafficClickerFolders();
+  // Ensure CRClicker folder exists on Desktop
+  await ensureCRClickerFolder();
   
   // Check for command-line arguments (URL)
   const args = process.argv.slice(2);
@@ -332,7 +322,7 @@ ipcMain.handle('select-csv-file', async () => {
 });
 
 /**
- * Save session file to Documents/CRClicker/<Video Name> folder
+ * Save session file to Desktop/CRClicker/<Video Name> folder
  * Creates video-specific subfolder if videoName is provided
  * @param {Object} sessionData - Session state to save
  * @param {string} filename - Filename for session file
@@ -341,20 +331,9 @@ ipcMain.handle('select-csv-file', async () => {
  */
 ipcMain.handle('save-session-file', async (event, sessionData, filename, videoName) => {
   try {
-    await ensureTrafficClickerFolders();
-    const basePath = documentsTrafficClickerPath || path.join(app.getPath('documents'), 'CRClicker');
+    const videoFolder = await getVideoFolder(videoName);
     
-    // Create video-specific folder if videoName is provided
-    let targetPath = basePath;
-    if (videoName) {
-      const safeVideoName = videoName.replace(/[^a-zA-Z0-9_-]/g, '_');
-      targetPath = path.join(basePath, safeVideoName);
-      if (!fs.existsSync(targetPath)) {
-        fs.mkdirSync(targetPath, { recursive: true });
-      }
-    }
-    
-    const sessionPath = path.join(targetPath, filename);
+    const sessionPath = path.join(videoFolder, filename);
     
     // Ensure filename ends with .json
     const finalPath = sessionPath.endsWith('.json') ? sessionPath : sessionPath + '.json';
@@ -458,7 +437,7 @@ ipcMain.handle('load-csv-from-path', async (event, csvPath) => {
 });
 
 /**
- * Save CSV export to Documents/CRClicker/<Video Name> folder
+ * Save CSV export to Desktop/CRClicker/<Video Name> folder
  * Creates video-specific subfolder if videoName is provided
  * @param {string} csvData - CSV content to save
  * @param {string} exportType - 'normal' or 'auditor'
@@ -467,24 +446,13 @@ ipcMain.handle('load-csv-from-path', async (event, csvPath) => {
  * @returns {Promise<Object>} Success status and file path
  */
 ipcMain.handle('save-csv-export', async (event, csvData, exportType = 'normal', videoName, exportFilename) => {
-  await ensureTrafficClickerFolders();
-    const basePath = documentsTrafficClickerPath || path.join(app.getPath('documents'), 'CRClicker');
-  
-  // Create video-specific folder if videoName is provided
-  let targetPath = basePath;
-  if (videoName) {
-    const safeVideoName = videoName.replace(/[^a-zA-Z0-9_-]/g, '_');
-    targetPath = path.join(basePath, safeVideoName);
-    if (!fs.existsSync(targetPath)) {
-      fs.mkdirSync(targetPath, { recursive: true });
-    }
-  }
+  const videoFolder = await getVideoFolder(videoName);
   
   // Use provided filename or fall back to default
   const defaultFilename = exportFilename || (exportType === 'auditor' 
     ? 'traffic-data-auditor-export.csv' 
     : 'traffic-data-export.csv');
-  const defaultPath = path.join(targetPath, defaultFilename);
+  const defaultPath = path.join(videoFolder, defaultFilename);
   
   const result = await dialog.showSaveDialog(mainWindow, {
     title: exportType === 'auditor' ? 'Save Auditor CSV Export' : 'Save CSV Export',
@@ -581,7 +549,7 @@ ipcMain.handle('cancel-all-downloads', async () => {
 });
 
 /**
- * Download video from URL to Movies/CRClicker folder
+ * Download video from URL to Desktop/CRClicker/<Video Name> folder
  * Tracks download progress and prevents duplicate downloads
  * @param {string} videoUrl - URL of video to download
  * @returns {Promise<Object>} Success status, file path, and download stats
@@ -600,16 +568,10 @@ ipcMain.handle('download-video-from-url', async (event, videoUrl) => {
     const urlObj = new URL(videoUrl);
     const filename = urlObj.pathname.split('/').pop() || 'video.mp4';
     
-    // Use Movies/CRClicker folder
-    await ensureTrafficClickerFolders();
-    const downloadsPath = moviesTrafficClickerPath || path.join(app.getPath('home'), 'Movies', 'CRClicker');
+    // Get video folder (creates Desktop/CRClicker/<Video Name>)
+    const videoFolder = await getVideoFolder(filename);
     
-    // Create downloads directory if it doesn't exist
-    if (!fs.existsSync(downloadsPath)) {
-      fs.mkdirSync(downloadsPath, { recursive: true });
-    }
-    
-    const filePath = path.join(downloadsPath, filename);
+    const filePath = path.join(videoFolder, filename);
     
     // Use http or https based on URL protocol
     const client = urlObj.protocol === 'https:' ? https : http;
