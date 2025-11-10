@@ -4173,6 +4173,38 @@ function clearLogHighlights() {
 // CSV EXPORT
 // ============================================================================
 
+/**
+ * Generate export filename in format: <video name>+<DDMMYYYY>+<HHMMSS>+<dataentry|auditorentry>
+ * @param {string} extension - File extension (e.g., 'csv', 'json')
+ * @returns {string} Formatted filename
+ */
+function generateExportFilename(extension = 'csv') {
+  // Get video filename with extension
+  const videoPathParts = state.videoPath ? state.videoPath.split(/[/\\]/) : [];
+  const videoFilenameWithExt = videoPathParts.length > 0 ? videoPathParts[videoPathParts.length - 1] : 'unknown';
+  const videoName = videoFilenameWithExt; // Keep full filename with extension
+  
+  // Get current date and time
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = now.getFullYear();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  
+  // Format: DDMMYYYY
+  const dateStr = `${day}${month}${year}`;
+  // Format: HHMMSS (24hr)
+  const timeStr = `${hours}${minutes}${seconds}`;
+  
+  // Determine export type
+  const exportType = state.mode === 'audit' ? 'auditorentry' : 'dataentry';
+  
+  // Generate filename: <video name>+<DDMMYYYY>+<HHMMSS>+<dataentry|auditorentry>.<ext>
+  return `${videoName}+${dateStr}+${timeStr}+${exportType}.${extension}`;
+}
+
 async function exportToCSV() {
   if (state.masterLog.length === 0) {
     showToast('No data to export', 'warning');
@@ -4268,14 +4300,17 @@ async function exportToCSV() {
       progressText.textContent = 'Saving file...';
     }
 
-    // Get video filename for folder structure
+    // Get video filename for folder structure (without extension for folder name)
     const videoPathParts = state.videoPath ? state.videoPath.split(/[/\\]/) : [];
     const videoFilenameWithExt = videoPathParts.length > 0 ? videoPathParts[videoPathParts.length - 1] : 'unknown';
     const videoFilename = state.videoFileName || videoFilenameWithExt.replace(/\.[^/.]+$/, '');
 
-    // Save via IPC - use different filename for audit mode
+    // Generate export filename in new format
+    const exportFilename = generateExportFilename('csv');
+
+    // Save via IPC - pass the generated filename
     const exportType = state.mode === 'audit' ? 'auditor' : 'normal';
-    const result = await ipcRenderer.invoke('save-csv-export', csv, exportType, videoFilename);
+    const result = await ipcRenderer.invoke('save-csv-export', csv, exportType, videoFilename, exportFilename);
     
     // Complete progress
     if (progressBarFill) progressBarFill.style.width = '100%';
@@ -4339,9 +4374,12 @@ async function exportToJSON(entries) {
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     
+    // Generate export filename in new format
+    const exportFilename = generateExportFilename('json');
+    
     const a = document.createElement('a');
     a.href = url;
-    a.download = `traffic-data-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = exportFilename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

@@ -463,9 +463,10 @@ ipcMain.handle('load-csv-from-path', async (event, csvPath) => {
  * @param {string} csvData - CSV content to save
  * @param {string} exportType - 'normal' or 'auditor'
  * @param {string} videoName - Optional video name for subfolder
+ * @param {string} exportFilename - Optional custom filename (if not provided, uses default)
  * @returns {Promise<Object>} Success status and file path
  */
-ipcMain.handle('save-csv-export', async (event, csvData, exportType = 'normal', videoName) => {
+ipcMain.handle('save-csv-export', async (event, csvData, exportType = 'normal', videoName, exportFilename) => {
   await ensureTrafficClickerFolders();
     const basePath = documentsTrafficClickerPath || path.join(app.getPath('documents'), 'CRClicker');
   
@@ -479,9 +480,10 @@ ipcMain.handle('save-csv-export', async (event, csvData, exportType = 'normal', 
     }
   }
   
-  const defaultFilename = exportType === 'auditor' 
+  // Use provided filename or fall back to default
+  const defaultFilename = exportFilename || (exportType === 'auditor' 
     ? 'traffic-data-auditor-export.csv' 
-    : 'traffic-data-export.csv';
+    : 'traffic-data-export.csv');
   const defaultPath = path.join(targetPath, defaultFilename);
   
   const result = await dialog.showSaveDialog(mainWindow, {
