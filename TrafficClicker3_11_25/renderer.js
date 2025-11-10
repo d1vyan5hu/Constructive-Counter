@@ -1713,6 +1713,15 @@ function drawRedDots() {
         if (state.isRewinding || state.mode === 'audit') {
           highlightEntryInLog(entryId, true);
         }
+        
+        // Pause video when dot turns green in audit mode or recap mode
+        if ((state.isRewinding || state.mode === 'audit') && !state.pausedAtGreenDots.has(entryId)) {
+          if (state.videoElement && !state.videoElement.paused) {
+            state.videoElement.pause();
+            state.pausedAtGreenDots.add(entryId);
+            log(`Paused at green dot for entry ${entryId} at ${entryTime.toFixed(2)}s (audit/recap mode)`);
+          }
+        }
       }
       // Red right after entry time
       else if (timeDiff >= 0.1) {
